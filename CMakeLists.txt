@@ -27,10 +27,3 @@ target_link_libraries(inference PRIVATE
 
 enable_testing()
 add_subdirectory(tests)
-# Tests
-#find_package(GTest CONFIG REQUIRED)
-#
-#add_executable(tests tests/tests.cpp)
-#
-#target_link_libraries(tests PRIVATE GTest::gtest GTest::gtest_main)
-#target_include_directories(tests PRIVATE src)
