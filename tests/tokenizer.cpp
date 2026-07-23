@@ -11,7 +11,7 @@ static inference::Tokenizer get_tokenizer() {
 // TODO(pind0s): maybe we should expose more functions so we can test them directly? idk.
 
 TEST(Tokenizer, TokenizesAndDecodesBasicText) {
-    constexpr std::string prompt = "Hello world";
+    const std::string prompt = "Hello world";
 
     const auto tokens = tokenizer.tokenize(prompt);
     EXPECT_THAT(tokens, testing::ElementsAre(9707, 1879));
@@ -21,7 +21,7 @@ TEST(Tokenizer, TokenizesAndDecodesBasicText) {
 }
 
 TEST(Tokenizer, UnicodeText) {
-    constexpr std::string prompt = "曹尼玛💀";
+    const std::string prompt = "曹尼玛💀";
 
     const auto tokens = tokenizer.tokenize(prompt);
     EXPECT_THAT(tokens, testing::ElementsAre(102263, 99685, 101382, 146571));
@@ -29,3 +29,16 @@ TEST(Tokenizer, UnicodeText) {
     const auto decode = tokenizer.decode(tokens);
     ASSERT_EQ(prompt, decode);
 }
+
+TEST(Tokenizer, BasicSpeicalToken) {
+    constexpr auto prompt = "<|endoftext|><tool_response></tool_response>";
+
+    const auto tokens = tokenizer.tokenize(prompt);
+    EXPECT_THAT(tokens, testing::ElementsAre(151643, 151665, 151666));
+
+    const auto decode = tokenizer.decode(tokens);
+    ASSERT_EQ(prompt, decode);
+}
+
+
+

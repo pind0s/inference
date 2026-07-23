@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <boost/container_hash/hash.hpp>
+#include <boost/regex.hpp>
 #include <boost/regex/icu.hpp>
 #include <nlohmann/json.hpp>
 #include <unicode/normalizer2.h>
@@ -7,14 +9,47 @@
 #include "tokenizer.hpp"
 #include "util/files.hpp"
 
-// good reference: https://github.com/ml-rust/splintr/blob/main/docs/bytelevel_bpe.md
 namespace inference {
     namespace {
         constexpr std::size_t BYTE_VOCAB_SIZE = 256;
 
-        // TODO(pind0s): parse_special_tokens
         [[nodiscard]]
-        std::string parse_regex(const nlohmann::json& tokenizer) {
+        TokenizerVocab parse_special_tokens(const nlohmann::json& tokenizer) {
+            TokenizerVocab result;
+
+            for (const auto& token : tokenizer.at("added_tokens")) {
+                const auto token_id = token.at("id").get<TokenId>();
+                const auto token_text = token.at("content").get<std::string>();
+
+                result.word_to_id.emplace(token_text, token_id);
+                result.id_to_word.emplace(token_id, token_text);
+            }
+
+            return result;
+        }
+
+        [[nodiscard]]
+        boost::regex make_special_token_regex(const TokenizerVocab& special_tokens) {
+            static const boost::regex pipe_regex{R"(\|)"};
+
+            std::vector<std::string> tokens;
+            for (const auto& token : special_tokens.word_to_id | std::views::keys) {
+                tokens.push_back(boost::regex_replace(token, pipe_regex, R"(\\|)"));
+            }
+
+            std::string pattern;
+            for (const auto& token : tokens) {
+                if (!pattern.empty()) {
+                    pattern += '|';
+                }
+                pattern += token;
+            }
+
+            return boost::regex{pattern};
+        }
+
+        [[nodiscard]]
+        std::string parse_pretokenizer_regex(const nlohmann::json& tokenizer) {
             auto pattern =
                 tokenizer.at("pre_tokenizer").at("pretokenizers").at(0).at("pattern").at("Regex").get<std::string>();
 
@@ -60,6 +95,7 @@ namespace inference {
             return result;
         }
 
+        // good reference: https://github.com/ml-rust/splintr/blob/main/docs/bytelevel_bpe.md
         [[nodiscard]]
         std::array<std::string, BYTE_VOCAB_SIZE> byte_to_codepoint_table() {
             std::array<std::string, BYTE_VOCAB_SIZE> table;
@@ -119,6 +155,14 @@ namespace inference {
             return symbols;
         }
 
+        [[nodiscard]]
+        auto split_special_tokens(const std::string& text, const boost::regex& special_token_regex) {
+            using Iterator = boost::sregex_token_iterator;
+
+            // -1 returns text between regex matches, 0 returns regex match itself. don't ask me, i have no idea.
+            return std::ranges::subrange{Iterator{text.begin(), text.end(), special_token_regex, {-1, 0}}, Iterator{}};
+        }
+
     } // namespace
 
     std::size_t MergePairHasher::operator()(const MergePair& pair) const noexcept {
@@ -147,15 +191,37 @@ namespace inference {
         const auto config_json = nlohmann::json::parse(config_file.value());
 
         Tokenizer result;
-        result.pretokenizer_regex_ = boost::make_u32regex(parse_regex(tokenizer_json));
+        result.pretokenizer_regex_ = boost::make_u32regex(parse_pretokenizer_regex(tokenizer_json));
         result.vocab_ = parse_vocab(tokenizer_json);
         result.merges_ = parse_merges(tokenizer_json);
+        result.special_tokens_ = parse_special_tokens(tokenizer_json);
+        result.special_token_regex_ = make_special_token_regex(result.special_tokens_);
 
         return result;
     }
 
     TokenList Tokenizer::tokenize(const std::string& prompt) const {
-        const auto normalized = normalize_nfc(prompt);
+        TokenList ids;
+
+        for (const auto& match : split_special_tokens(prompt, special_token_regex_)) {
+            const auto piece = match.str();
+
+            if (piece.empty()) {
+                continue;
+            }
+
+            if (special_tokens_.word_to_id.contains(piece)) {
+                ids.push_back(special_tokens_.word_to_id.at(piece));
+            } else {
+                ids.append_range(tokenize_text(piece));
+            }
+        }
+
+        return ids;
+    }
+
+    TokenList Tokenizer::tokenize_text(const std::string& text) const {
+        const auto normalized = normalize_nfc(text);
         const auto pieces = pre_tokenize(normalized);
 
         TokenList ids;
@@ -174,6 +240,11 @@ namespace inference {
         std::string decoded;
 
         for (const auto token_id : token_list) {
+            if (special_tokens_.id_to_word.contains(token_id)) {
+                decoded.append(special_tokens_.id_to_word.at(token_id));
+                continue;
+            }
+
             const auto& token = vocab_.id_to_word.at(token_id);
             const auto unicode = icu::UnicodeString::fromUTF8(token);
 
