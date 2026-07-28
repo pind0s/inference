@@ -1,5 +1,8 @@
 #include <print>
 
+#include "storage/cpu_memory_resource.hpp"
+#include "storage/storage.hpp"
+#include "tensor/tensor.hpp"
 #include "tokenizer/tokenizer.hpp"
 #include "util/args.hpp"
 

@@ -16,7 +16,7 @@ namespace inference {
     };
 
     struct MergePairHasher {
-        // implemented in cpp so we don't include boost::hash here
+        // implemented in cpp so we don't include boost::hash here todo remove boost::hash
         std::size_t operator()(const MergePair& pair) const noexcept;
     };
 

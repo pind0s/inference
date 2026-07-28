@@ -10,6 +10,7 @@
 #include "util/files.hpp"
 
 namespace inference {
+    // todo probably make this static and add them to Tokenizer class
     namespace {
         constexpr std::size_t BYTE_VOCAB_SIZE = 256;
 

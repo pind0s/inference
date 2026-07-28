@@ -1,8 +1,6 @@
 find_package(GTest CONFIG REQUIRED)
 
-add_executable(inference_tests
-        tokenizer.cpp
-)
+add_executable(inference_tests tokenizer.cpp)
 
 target_compile_definitions(inference_tests
         PRIVATE
