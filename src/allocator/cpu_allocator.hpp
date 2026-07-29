@@ -1,10 +1,10 @@
 #pragma once
 #include <memory>
 
-#include "storage/memory_resource.hpp"
+#include "allocator.hpp"
 
 namespace inference {
-    class CpuMemoryResource final : public MemoryResource {
+    class CpuAllocator : public BaseAllocator {
     public:
         [[nodiscard]] void* allocate(std::size_t size_bytes) override {
             if (size_bytes == 0) {

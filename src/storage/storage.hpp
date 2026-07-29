@@ -3,12 +3,12 @@
 #include <stdexcept>
 #include <utility>
 
-#include "storage/memory_resource.hpp"
+#include "../allocator/allocator.hpp"
 
 namespace inference {
     class Storage {
     public:
-        Storage(std::shared_ptr<MemoryResource> resource, std::size_t size_bytes)
+        Storage(std::shared_ptr<BaseAllocator> resource, std::size_t size_bytes)
             : resource_{std::move(resource)}, size_bytes_{size_bytes} {
             if (!resource_) {
                 throw std::invalid_argument("storage memory resource cannot be null");
@@ -42,7 +42,7 @@ namespace inference {
         }
 
     private:
-        std::shared_ptr<MemoryResource> resource_;
+        std::shared_ptr<BaseAllocator> resource_;
         void* data_ = nullptr;
         std::size_t size_bytes_;
     };

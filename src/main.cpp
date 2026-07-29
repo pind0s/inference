@@ -1,6 +1,6 @@
 #include <print>
 
-#include "storage/cpu_memory_resource.hpp"
+#include "allocator/cpu_allocator.hpp"
 #include "storage/storage.hpp"
 #include "tensor/tensor.hpp"
 #include "tokenizer/tokenizer.hpp"
