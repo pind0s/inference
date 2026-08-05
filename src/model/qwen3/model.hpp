@@ -8,7 +8,7 @@
 #include "tensor/tensor.hpp"
 
 namespace inference::model::qwen3 {
-    struct Attention {
+    struct SelfAttention {
         Tensor q_proj;
         Tensor k_proj;
         Tensor v_proj;
@@ -26,7 +26,7 @@ namespace inference::model::qwen3 {
 
     struct Layer {
         Tensor input_layernorm;
-        Attention self_attn;
+        SelfAttention self_attn;
         Tensor post_attention_layernorm;
         MLP mlp;
     };
@@ -47,15 +47,18 @@ namespace inference::model::qwen3 {
             auto final_norm = model_weights.take("norm.weight");
             auto lm_head = weights.take("lm_head.weight");
 
+            if (config.tie_word_embeddings) {
+                lm_head = Tensor::from_storage(embed_tokens.storage(), embed_tokens.shape(), embed_tokens.dtype());
+            }
+
             std::vector<Layer> layers;
             layers.reserve(config.num_hidden_layers);
-
-            for (std::size_t layer_index : std::views::iota(0UZ, config.num_hidden_layers)) {
+            for (std::size_t layer_index = 0; layer_index < config.num_hidden_layers; layer_index++) {
                 auto layer = layer_weights.scope(layer_index);
                 auto attention_weights = layer.scope("self_attn");
                 auto mlp_weights = layer.scope("mlp");
 
-                Attention self_attn{
+                SelfAttention self_attn{
                     .q_proj = attention_weights.take("q_proj.weight"),
                     .k_proj = attention_weights.take("k_proj.weight"),
                     .v_proj = attention_weights.take("v_proj.weight"),

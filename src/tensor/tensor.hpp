@@ -64,6 +64,10 @@ namespace inference {
             return storage_->device();
         }
 
+        [[nodiscard]] std::shared_ptr<Storage> storage() const {
+            return storage_;
+        }
+
         template <typename T>
         [[nodiscard]] T* data() {
             return static_cast<T*>(storage_->data());
