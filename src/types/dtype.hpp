@@ -14,12 +14,12 @@ namespace inference::types {
             return 2;
         case DType::F32:
             return 4;
-        default:
-            std::unreachable();
         }
+
+        throw std::invalid_argument("Unknown size for safetensors dtype");
     }
 
-    [[nodiscard]] constexpr DType dtype_from_string(std::string_view str) {
+    [[nodiscard]] inline DType dtype_from_string(std::string_view str) {
         if (str == "BF16") {
             return DType::BF16;
         }

@@ -3,11 +3,12 @@
 #include <string>
 
 #include "types/activation.hpp"
-namespace inference::model::qwen3 {
+
+namespace inference::model {
     struct Qwen3Config {
         std::string model_type;
         std::size_t head_dim{};
-        types::Activation hidden_act;
+        types::Activation hidden_act{};
         std::size_t hidden_size{};
         std::size_t intermediate_size{};
         std::size_t max_position_embeddings{};
@@ -15,13 +16,14 @@ namespace inference::model::qwen3 {
         std::size_t num_attention_heads{};
         std::size_t num_hidden_layers{};
         std::size_t num_key_value_heads{};
-        float rms_norm_eps{}; // todo should this be double or nah?
+        float rms_norm_eps{};
         float rope_theta{};
         bool tie_word_embeddings{};
         std::optional<std::size_t> sliding_window;
         bool use_sliding_window{};
         std::size_t vocab_size{};
 
+        // todo maybe
         [[nodiscard]] static Qwen3Config from_json(const nlohmann::json& json) {
             Qwen3Config config;
             json.at("model_type").get_to(config.model_type);
@@ -44,4 +46,4 @@ namespace inference::model::qwen3 {
         }
     };
 
-} // namespace inference::model::qwen3
+} // namespace inference::model

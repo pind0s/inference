@@ -1,5 +1,4 @@
 #pragma once
-
 #include <filesystem>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -10,17 +9,18 @@
 #include "tensor/tensor.hpp"
 #include "util/files.hpp"
 
-namespace inference {
+namespace inference::safetensors {
     struct TensorDescriptor {
         std::size_t data_begin{};
         std::size_t data_end{};
-        std::string dtype;
-        std::vector<std::size_t> shape;
+        types::DType dtype{};
+        TensorShape shape;
 
         [[nodiscard]] static TensorDescriptor from_json(const nlohmann::json& json) {
             TensorDescriptor result;
-            json.at("dtype").get_to(result.dtype);
-            json.at("shape").get_to(result.shape);
+
+            result.dtype = types::dtype_from_string(json.at("dtype").get<std::string>());
+            result.shape = TensorShape(json.at("shape").get<std::vector<std::size_t>>());
 
             std::array<std::size_t, 2> data_offsets{};
             json.at("data_offsets").get_to(data_offsets);
@@ -33,7 +33,7 @@ namespace inference {
 
     // todo add support for models that are sharded into multiple files
     // todo add support for manual mapped files
-    [[nodiscard]] inline Weights load_weights_from_path(const std::filesystem::path& path) {
+    [[nodiscard]] inline Weights load_weights_from_dir(const std::filesystem::path& path) {
 
         // todo uhm, i thinks its fine if we first load model to cpu and then transfer tensors gpu, or should we directly copy to correct device?
         const auto cpu_allocator = std::make_shared<CpuAllocator>();
@@ -54,21 +54,13 @@ namespace inference {
                 continue;
             }
 
-            const auto [data_begin, data_end, dtype, shape] = TensorDescriptor::from_json(value);
-            auto tensor = Tensor::empty(TensorShape(shape), types::dtype_from_string(dtype), cpu_allocator);
-            std::ranges::copy(weight_bytes.subspan(data_begin, data_end - data_begin), tensor.as_writable_bytes().begin());
+            const auto descriptor = TensorDescriptor::from_json(value);
+            auto tensor = Tensor::empty(descriptor.shape, descriptor.dtype, cpu_allocator);
+            auto source = weight_bytes.subspan(descriptor.data_begin, tensor.size_bytes());
+            std::memcpy(tensor.raw_data(), source.data(), tensor.size_bytes());
             weights.insert(key, std::move(tensor));
         }
 
         return weights;
     }
-} // namespace inference
-
-// todo probably just remove this.
-// template <>
-// struct std::formatter<inference::TensorDescriptor> : std::formatter<std::string> {
-//     auto format(const inference::TensorDescriptor& value, auto& ctx) const {
-//         constexpr auto fmt = "TensorDescriptor{{data_offsets: [{},{}], dtype: {}, shape: {}}}";
-//         return std::format_to(ctx.out(), fmt, value.data_begin, value.data_end, value.dtype, value.shape);
-//     }
-// };
+} // namespace inference::safetensors

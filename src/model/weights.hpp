@@ -1,5 +1,4 @@
 #pragma once
-
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -16,7 +15,7 @@ namespace inference {
         Weights(): tensors_{std::make_shared<TensorMap>()} { }
 
         void insert(const std::string& name, Tensor tensor) {
-            tensors_->emplace(full_name(name), std::move(tensor));
+            tensors_->emplace(name, std::move(tensor));
         }
 
         [[nodiscard]] Tensor take(const std::string_view name) {
@@ -34,7 +33,7 @@ namespace inference {
             return Weights{tensors_, std::move(prefix)};
         }
 
-        [[nodiscard]] Weights scope(const std::size_t index) const {
+        [[nodiscard]] Weights scope(const std::size_t index) {
             return scope(std::to_string(index));
         }
 
@@ -50,9 +49,7 @@ namespace inference {
         Weights(std::shared_ptr<TensorMap> tensors, std::string prefix): tensors_{std::move(tensors)}, prefix_{std::move(prefix)} { }
 
         [[nodiscard]] std::string full_name(const std::string_view name) const {
-            auto result = prefix_;
-            result.append(name);
-            return result;
+            return prefix_ + std::string(name);
         }
 
         std::shared_ptr<TensorMap> tensors_;
