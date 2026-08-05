@@ -7,7 +7,11 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Boost REQUIRED COMPONENTS regex container_hash)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
 
-add_library(inference_lib src/tokenizer/tokenizer.cpp)
+# todo should we put .hpp files here or nah? no idea, find out.
+add_library(inference_lib src/tokenizer/tokenizer.cpp
+        src/ops/matmul.hpp
+        src/kernels/cpu/matmul.hpp
+        src/runtime/context.hpp)
 target_include_directories(inference_lib PUBLIC src)
 
 target_link_libraries(inference_lib PUBLIC

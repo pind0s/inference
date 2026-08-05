@@ -51,8 +51,7 @@ namespace inference {
 
         [[nodiscard]]
         std::string parse_pretokenizer_regex(const nlohmann::json& tokenizer) {
-            auto pattern =
-                tokenizer.at("pre_tokenizer").at("pretokenizers").at(0).at("pattern").at("Regex").get<std::string>();
+            auto pattern = tokenizer.at("pre_tokenizer").at("pretokenizers").at(0).at("pattern").at("Regex").get<std::string>();
 
             // boost requires long names for Unicode categories
             pattern = boost::regex_replace(pattern, boost::regex(R"(\\p\{L\})"), R"(\\p{Letter})");
@@ -103,9 +102,8 @@ namespace inference {
 
             UChar32 next_remapped = U'\u0100';
             // TODO(pind0s): std::ranges::views::indices c++26 only :(
-            for (const auto byte : std::views::iota(std::size_t{0}, table.size())) {
-                const bool unchanged =
-                    (byte >= 0x21 && byte <= 0x7E) || (byte >= 0xA1 && byte <= 0xAC) || (byte >= 0xAE && byte <= 0xFF);
+            for (const auto byte : std::views::iota(0UZ, table.size())) {
+                const bool unchanged = (byte >= 0x21 && byte <= 0x7E) || (byte >= 0xA1 && byte <= 0xAC) || (byte >= 0xAE && byte <= 0xFF);
 
                 const auto mapped_codepoint = unchanged ? static_cast<UChar32>(byte) : next_remapped++;
                 table[byte] = codepoint_to_utf8(mapped_codepoint);
@@ -173,8 +171,7 @@ namespace inference {
         return seed;
     }
 
-    Tokenizer Tokenizer::load_tokenizer(const std::filesystem::path& tokenizer_path,
-                                        const std::filesystem::path& tokenizer_config_path) {
+    Tokenizer Tokenizer::load_tokenizer(const std::filesystem::path& tokenizer_path, const std::filesystem::path& tokenizer_config_path) {
 
         auto tokenizer_file = util::read_file(tokenizer_path);
         if (!tokenizer_file) {
@@ -288,9 +285,8 @@ namespace inference {
             }
 
             // find the best pair
-            const auto best = std::ranges::min_element(candidates, [this](const MergePair& lhs, const MergePair& rhs) {
-                return merges_.at(lhs) < merges_.at(rhs);
-            });
+            const auto best = std::ranges::min_element(
+                candidates, [this](const MergePair& lhs, const MergePair& rhs) { return merges_.at(lhs) < merges_.at(rhs); });
 
             // merge
             const auto [left, right] = *best;

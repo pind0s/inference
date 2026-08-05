@@ -1,6 +1,6 @@
 #pragma once
 
-namespace inference {
+namespace inference::types {
     enum class DType : std::uint8_t {
         F16,
         BF16,
@@ -18,4 +18,20 @@ namespace inference {
             std::unreachable();
         }
     }
-} // namespace inference
+
+    [[nodiscard]] constexpr DType dtype_from_string(std::string_view str) {
+        if (str == "BF16") {
+            return DType::BF16;
+        }
+
+        if (str == "F16") {
+            return DType::F16;
+        }
+
+        if (str == "F32") {
+            return DType::F32;
+        }
+
+        throw std::invalid_argument("Unsupported safetensors dtype: " + std::string(str));
+    }
+} // namespace inference::types

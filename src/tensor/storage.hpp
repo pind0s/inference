@@ -3,13 +3,14 @@
 #include <stdexcept>
 #include <utility>
 
-#include "../allocator/allocator.hpp"
+#include "allocator/allocator.hpp"
+#include "util/move_only.hpp"
 
 namespace inference {
-    class Storage {
+    // todo I don't think Storage is move only? i think we need to redesign this
+    class Storage : util::MoveOnly {
     public:
-        Storage(std::shared_ptr<BaseAllocator> resource, std::size_t size_bytes)
-            : resource_{std::move(resource)}, size_bytes_{size_bytes} {
+        Storage(std::shared_ptr<BaseAllocator> resource, std::size_t size_bytes): resource_{std::move(resource)}, size_bytes_{size_bytes} {
             if (!resource_) {
                 throw std::invalid_argument("storage memory resource cannot be null");
             }
@@ -37,7 +38,7 @@ namespace inference {
             return size_bytes_;
         }
 
-        [[nodiscard]] Device device() const {
+        [[nodiscard]] types::Device device() const {
             return resource_->device();
         }
 

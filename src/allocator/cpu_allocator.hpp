@@ -17,8 +17,8 @@ namespace inference {
             allocator_.deallocate(static_cast<std::byte*>(pointer), size_bytes);
         }
 
-        [[nodiscard]] Device device() const override {
-            return Device::CPU;
+        [[nodiscard]] types::Device device() const override {
+            return types::Device::CPU;
         }
 
     private:

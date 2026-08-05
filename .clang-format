@@ -57,7 +57,7 @@ BreakConstructorInitializers: BeforeColon
 BreakFunctionDefinitionParameters: false
 BreakStringLiterals: true
 BreakTemplateDeclarations: Yes
-ColumnLimit: 125
+ColumnLimit: 145
 CompactNamespaces: false
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4

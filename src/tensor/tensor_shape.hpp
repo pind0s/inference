@@ -38,7 +38,7 @@ namespace inference {
         constexpr bool operator==(const TensorShape&) const = default;
 
     private:
-        std::array<std::size_t, MAX_RANK> dimensions_{};
-        std::size_t rank_;
+        std::array<std::size_t, MAX_RANK> dimensions_ = {};
+        std::size_t rank_ = 0;
     };
 } // namespace inference
