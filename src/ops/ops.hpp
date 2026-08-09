@@ -1,6 +1,7 @@
 #pragma once
 #include "elementwise.hpp"
 #include "embedding.hpp"
+#include "kv_cache.hpp"
 #include "matmul.hpp"
 #include "qk_norm.hpp"
 #include "rmsnorm.hpp"
