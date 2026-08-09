@@ -1,6 +1,10 @@
 find_package(GTest CONFIG REQUIRED)
 
-add_executable(inference_tests tokenizer.cpp)
+add_executable(inference_tests
+        kernels/cpu/matmul.cpp
+        tokenizer.cpp)
+
+target_include_directories(inference_tests PUBLIC .)
 
 target_compile_definitions(inference_tests
         PRIVATE
@@ -10,7 +14,7 @@ target_compile_definitions(inference_tests
 target_link_libraries(inference_tests
         PRIVATE
         inference_lib
-        GTest::gtest_main
+        GTest::gmock_main
 )
 
 include(GoogleTest)
