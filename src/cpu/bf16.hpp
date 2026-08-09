@@ -7,7 +7,7 @@ namespace inference::cpu {
 
         // todo maybe we should just use cast directly? need to look into it
         [[gnu::always_inline]] [[nodiscard]] static bf16_t from_float(const float f32) {
-            bf16_t result {};
+            bf16_t result{};
             result.value = _mm_cvtness_sbh(f32);
             return result;
         }

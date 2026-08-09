@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
 #include "storage.hpp"
 #include "tensor_shape.hpp"
 #include "types/dtype.hpp"
@@ -20,7 +21,8 @@ namespace inference {
 
         template <typename T>
         [[nodiscard]]
-        static Tensor from_vector(const std::vector<T>& values, const TensorShape& shape, types::DType dtype, std::shared_ptr<allocator::BaseAllocator> allocator) {
+        static Tensor from_vector(const std::vector<T>& values, const TensorShape& shape, types::DType dtype,
+                                  std::shared_ptr<allocator::BaseAllocator> allocator) {
             const auto expected_size_bytes = shape.element_count() * dtype_size(dtype);
             const auto supplied_size_bytes = values.size() * sizeof(T);
             if (supplied_size_bytes != expected_size_bytes) {

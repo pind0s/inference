@@ -1,12 +1,13 @@
-#include "test_util.hpp"
 #include <tokenizer/tokenizer.hpp>
 
-static inference::Tokenizer get_tokenizer() {
+#include "util.hpp"
+
+static inference::Tokenizer get_tokenizer() noexcept {
     auto resource_path = test::resource_path();
     return inference::Tokenizer::load_tokenizer(resource_path / "tokenizer.json", resource_path / "tokenizer_config.json");
 }
 
- const static inference::Tokenizer tokenizer = get_tokenizer();
+const static inference::Tokenizer tokenizer = get_tokenizer();
 
 TEST(Tokenizer, TokenizesAndDecodesBasicText) {
     constexpr auto prompt = "Hello world";
@@ -37,6 +38,3 @@ TEST(Tokenizer, BasicSpeicalToken) {
     const auto decode = tokenizer.decode(tokens);
     ASSERT_EQ(prompt, decode);
 }
-
-
-
