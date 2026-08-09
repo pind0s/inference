@@ -4,7 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-#include "allocator/cpu_allocator.hpp"
+#include "allocator/allocator.hpp"
 #include "model/weights.hpp"
 #include "tensor/tensor.hpp"
 #include "util/files.hpp"
@@ -33,10 +33,8 @@ namespace inference::safetensors {
 
     // todo add support for models that are sharded into multiple files
     // todo add support for manual mapped files
-    [[nodiscard]] inline Weights load_weights_from_dir(const std::filesystem::path& path) {
-
-        // todo uhm, i thinks its fine if we first load model to cpu and then transfer tensors gpu, or should we directly copy to correct device?
-        const auto cpu_allocator = std::make_shared<CpuAllocator>();
+    [[nodiscard]] inline Weights load_weights_from_dir(const std::filesystem::path& path,
+                                                       const std::shared_ptr<allocator::BaseAllocator>& allocator) {
         Weights weights;
 
         const auto file = util::read_file(util::require_file(path / "model.safetensors")).value();
@@ -55,9 +53,10 @@ namespace inference::safetensors {
             }
 
             const auto descriptor = TensorDescriptor::from_json(value);
-            auto tensor = Tensor::empty(descriptor.shape, descriptor.dtype, cpu_allocator);
+            auto tensor = Tensor::empty(descriptor.shape, descriptor.dtype, allocator);
             auto source = weight_bytes.subspan(descriptor.data_begin, tensor.size_bytes());
-            std::memcpy(tensor.raw_data(), source.data(), tensor.size_bytes());
+            std::ranges::uninitialized_copy(source, tensor.as_writable_bytes()); // todo this won't work with cuda. maybe we should always first
+                                                                                     // copy to cpu and then transfer tensor to cuda?
             weights.insert(key, std::move(tensor));
         }
 

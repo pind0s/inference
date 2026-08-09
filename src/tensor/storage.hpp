@@ -10,7 +10,8 @@ namespace inference {
     // todo I don't think Storage is move only? i think we need to redesign this
     class Storage : util::MoveOnly {
     public:
-        Storage(std::shared_ptr<BaseAllocator> resource, std::size_t size_bytes): resource_{std::move(resource)}, size_bytes_{size_bytes} {
+        Storage(std::shared_ptr<allocator::BaseAllocator> resource, std::size_t size_bytes)
+            : resource_{std::move(resource)}, size_bytes_{size_bytes} {
             if (!resource_) {
                 throw std::invalid_argument("storage memory resource cannot be null");
             }
@@ -19,7 +20,7 @@ namespace inference {
 
         ~Storage() {
             if (data_ != nullptr) {
-                resource_->deallocate(data_, size_bytes_);
+                resource_->deallocate(data_);
             }
         }
 
@@ -43,7 +44,7 @@ namespace inference {
         }
 
     private:
-        std::shared_ptr<BaseAllocator> resource_;
+        std::shared_ptr<allocator::BaseAllocator> resource_;
         void* data_ = nullptr;
         std::size_t size_bytes_;
     };
