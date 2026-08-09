@@ -1,8 +1,10 @@
 #pragma once
 #include <memory>
+#include <span>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
-
+#include <vector>
 #include "storage.hpp"
 #include "tensor_shape.hpp"
 #include "types/dtype.hpp"
@@ -11,9 +13,24 @@
 namespace inference {
     class Tensor : util::MoveOnly {
     public:
-        [[nodiscard]] static Tensor empty(const TensorShape& shape, types::DType dtype, std::shared_ptr<BaseAllocator> allocator) {
+        [[nodiscard]] static Tensor empty(const TensorShape& shape, types::DType dtype, std::shared_ptr<allocator::BaseAllocator> allocator) {
             auto storage = std::make_shared<Storage>(std::move(allocator), element_count(shape) * element_size(dtype));
             return Tensor{std::move(storage), shape, dtype};
+        }
+
+        template <typename T>
+        [[nodiscard]]
+        static Tensor from_vector(const std::vector<T>& values, const TensorShape& shape, types::DType dtype, std::shared_ptr<allocator::BaseAllocator> allocator) {
+            const auto expected_size_bytes = element_count(shape) * element_size(dtype);
+            const auto supplied_size_bytes = values.size() * sizeof(T);
+            if (supplied_size_bytes != expected_size_bytes) {
+                throw std::invalid_argument("tensor shape and dtype do not match the supplied data size");
+            }
+
+            auto result = empty(shape, dtype, std::move(allocator));
+            auto destination = std::span<T>{result.data<T>(), values.size()};
+            std::ranges::uninitialized_copy(values, destination);
+            return result;
         }
 
         [[nodiscard]] static Tensor from_storage(std::shared_ptr<Storage> storage, const TensorShape& shape, types::DType dtype) {
@@ -83,12 +100,6 @@ namespace inference {
 
         [[nodiscard]] const void* raw_data() const {
             return storage_->data();
-        }
-
-        template <typename T>
-        [[nodiscard]] std::span<T> as_span() {
-            // todo verify size of T and stored dtype
-            return std::span<T>(static_cast<T*>(storage_->data()), num_elems());
         }
 
         [[nodiscard]] std::span<const std::byte> as_bytes() const {
