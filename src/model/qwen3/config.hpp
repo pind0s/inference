@@ -4,8 +4,8 @@
 
 #include "types/activation.hpp"
 
-namespace inference::model {
-    struct Qwen3Config {
+namespace inference::model::qwen3 {
+    struct Config {
         std::string model_type;
         std::size_t head_dim{};
         types::Activation hidden_act{};
@@ -23,9 +23,8 @@ namespace inference::model {
         bool use_sliding_window{};
         std::size_t vocab_size{};
 
-        // todo maybe
-        [[nodiscard]] static Qwen3Config from_json(const nlohmann::json& json) {
-            Qwen3Config config;
+        [[nodiscard]] static Config from_json(const nlohmann::json& json) {
+            Config config;
             json.at("model_type").get_to(config.model_type);
             json.at("head_dim").get_to(config.head_dim);
             json.at("hidden_size").get_to(config.hidden_size);
@@ -46,4 +45,4 @@ namespace inference::model {
         }
     };
 
-} // namespace inference::model
+} // namespace inference::model::qwen3
