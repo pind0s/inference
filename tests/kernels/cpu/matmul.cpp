@@ -9,15 +9,13 @@
 #include "reference/cpu_matmul.hpp"
 #include "util.hpp"
 
-namespace {
-    struct MatmulShape {
-        std::size_t m;
-        std::size_t n;
-        std::size_t k;
-    };
+struct MatmulShape {
+    std::size_t m;
+    std::size_t n;
+    std::size_t k;
+};
 
-    class MatmulGemmTest : public testing::TestWithParam<MatmulShape> { };
-} // namespace
+class MatmulGemmTest : public testing::TestWithParam<MatmulShape> { };
 
 TEST_P(MatmulGemmTest, MatchesReference) {
     using namespace inference;

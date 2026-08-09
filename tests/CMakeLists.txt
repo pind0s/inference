@@ -1,6 +1,7 @@
 find_package(GTest CONFIG REQUIRED)
 
 add_executable(inference_tests
+        kernels/cpu/add.cpp
         kernels/cpu/matmul.cpp
         tokenizer.cpp)
 
