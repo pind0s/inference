@@ -14,14 +14,14 @@ namespace inference {
     class Tensor : util::MoveOnly {
     public:
         [[nodiscard]] static Tensor empty(const TensorShape& shape, types::DType dtype, std::shared_ptr<allocator::BaseAllocator> allocator) {
-            auto storage = std::make_shared<Storage>(std::move(allocator), element_count(shape) * element_size(dtype));
+            auto storage = std::make_shared<Storage>(std::move(allocator), shape.element_count() * dtype_size(dtype));
             return Tensor{std::move(storage), shape, dtype};
         }
 
         template <typename T>
         [[nodiscard]]
         static Tensor from_vector(const std::vector<T>& values, const TensorShape& shape, types::DType dtype, std::shared_ptr<allocator::BaseAllocator> allocator) {
-            const auto expected_size_bytes = element_count(shape) * element_size(dtype);
+            const auto expected_size_bytes = shape.element_count() * dtype_size(dtype);
             const auto supplied_size_bytes = values.size() * sizeof(T);
             if (supplied_size_bytes != expected_size_bytes) {
                 throw std::invalid_argument("tensor shape and dtype do not match the supplied data size");
@@ -46,7 +46,7 @@ namespace inference {
         }
 
         [[nodiscard]] Tensor reshape(const TensorShape& shape) const {
-            if (element_count(shape) != num_elems()) {
+            if (shape.element_count() != shape_.element_count()) {
                 throw std::invalid_argument("reshape cannot change the number of tensor elements");
             }
             return Tensor{storage_, shape, dtype_};
@@ -64,12 +64,19 @@ namespace inference {
             return shape_.rank();
         }
 
+        [[nodiscard]] std::size_t dim(const std::size_t dimension) const {
+            if (dimension >= rank()) {
+                throw std::out_of_range("tensor dimension is out of range");
+            }
+            return shape_[dimension];
+        }
+
         [[nodiscard]] std::size_t num_elems() const {
-            return element_count(shape_);
+            return shape_.element_count();
         }
 
         [[nodiscard]] std::size_t size_bytes() const {
-            return num_elems() * element_size(dtype_);
+            return num_elems() * dtype_size(dtype_);
         }
 
         [[nodiscard]] types::DType dtype() const {
@@ -113,14 +120,6 @@ namespace inference {
     private:
         Tensor(std::shared_ptr<Storage> storage, const TensorShape& shape, types::DType dtype)
             : storage_{std::move(storage)}, shape_{shape}, strides_{make_contiguous_strides(shape_)}, dtype_{dtype} { }
-
-        [[nodiscard]] static std::size_t element_count(const TensorShape& shape) noexcept {
-            std::size_t result = 1;
-            for (const auto dimension : shape) {
-                result *= dimension;
-            }
-            return result;
-        }
 
         [[nodiscard]] static TensorShape make_contiguous_strides(const TensorShape& shape) {
             std::array<std::size_t, TensorShape::MAX_RANK> values{};

@@ -34,6 +34,14 @@ namespace inference {
             return dimensions_.begin() + static_cast<std::ptrdiff_t>(rank_);
         }
 
+        [[nodiscard]] constexpr std::size_t element_count() const noexcept {
+            std::size_t result = 1;
+            for (std::size_t i = 0; i < rank_; ++i) {
+                result *= dimensions_[i];
+            }
+            return result;
+        }
+
         constexpr bool operator==(const TensorShape&) const = default;
 
     private:
