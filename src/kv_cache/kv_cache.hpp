@@ -14,7 +14,7 @@ namespace inference {
             Tensor value;
         };
 
-        std::vector<Layer> layers;
+        std::vector<Layer> layers; // todo
         std::size_t token_count = 0;
 
         KVCache() = default;

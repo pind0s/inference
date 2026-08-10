@@ -4,24 +4,22 @@
 
 #include "cpu/bf16.hpp"
 namespace inference::cpu::kernels {
-    inline void rope(bf16_t* __restrict values, const std::size_t sequence_size, const std::size_t head_count, const std::size_t head_size,
-                     const float theta) noexcept {
+    inline void rope(bf16_t* __restrict values, const std::size_t head_count, const std::size_t head_size, const float theta,
+                     const std::size_t position) noexcept {
         const auto half_size = head_size / 2;
 
-        for (std::size_t sequence = 0; sequence < sequence_size; ++sequence) {
-            for (std::size_t head = 0; head < head_count; ++head) {
-                const auto base = (sequence * head_count + head) * head_size;
-                for (std::size_t index = 0; index < half_size; ++index) {
-                    const auto exponent = static_cast<float>(2 * index) / static_cast<float>(head_size);
-                    const auto angle = static_cast<float>(sequence) / std::pow(theta, exponent);
-                    const auto cosine = std::cos(angle);
-                    const auto sine = std::sin(angle);
-                    const auto first = values[base + index].to_float();
-                    const auto second = values[base + half_size + index].to_float();
+        for (std::size_t head = 0; head < head_count; ++head) {
+            const auto base = head * head_size;
+            for (std::size_t index = 0; index < half_size; ++index) {
+                const auto exponent = static_cast<float>(2 * index) / static_cast<float>(head_size);
+                const auto angle = static_cast<float>(position) / std::pow(theta, exponent);
+                const auto cosine = std::cos(angle);
+                const auto sine = std::sin(angle);
+                const auto first = values[base + index].to_float();
+                const auto second = values[base + half_size + index].to_float();
 
-                    values[base + index] = bf16_t::from_float(first * cosine - second * sine);
-                    values[base + half_size + index] = bf16_t::from_float(second * cosine + first * sine);
-                }
+                values[base + index] = bf16_t::from_float(first * cosine - second * sine);
+                values[base + half_size + index] = bf16_t::from_float(second * cosine + first * sine);
             }
         }
     }

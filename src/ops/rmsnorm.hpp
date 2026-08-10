@@ -7,8 +7,9 @@
 
 namespace inference::ops {
     namespace impl {
-        inline void rmsnorm_cpu(const Tensor& input, const Tensor& weight, Tensor& output, const std::size_t row_count,
-                                const std::size_t hidden_size, const float epsilon) {
+        inline void rmsnorm_cpu(const Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) {
+            const auto hidden_size = weight.num_elems();
+            const auto row_count = input.num_elems() / hidden_size;
             switch (input.dtype()) {
             case types::DType::BF16:
                 cpu::kernels::rmsnorm(input.data<cpu::bf16_t>(), weight.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), row_count, hidden_size,
@@ -20,11 +21,10 @@ namespace inference::ops {
         }
     } // namespace impl
 
-    inline void rmsnorm(const Tensor& input, const Tensor& weight, Tensor& output, const std::size_t row_count, const std::size_t hidden_size,
-                        const float epsilon) {
+    inline void rmsnorm(const Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) {
         switch (input.device()) {
         case types::Device::CPU:
-            impl::rmsnorm_cpu(input, weight, output, row_count, hidden_size, epsilon);
+            impl::rmsnorm_cpu(input, weight, output, epsilon);
             return;
         case types::Device::CUDA:
             throw std::runtime_error("cuda not implemented");

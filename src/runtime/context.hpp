@@ -1,5 +1,6 @@
 #pragma once
 #include "allocator/cpu_allocator.hpp"
+#include "kv_cache/kv_cache.hpp"
 
 namespace inference {
     struct CpuContext {
@@ -9,6 +10,7 @@ namespace inference {
 
     struct Context {
         CpuContext cpu_context;
+        KVCache kv_cache;
         // cuda context in the future
 
         static Context create_cpu_context() {

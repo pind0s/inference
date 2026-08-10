@@ -7,12 +7,10 @@
 
 namespace inference::ops {
     namespace impl {
-        inline void embedding_cpu(const Tensor& input_ids, const Tensor& weights, Tensor& output, const std::size_t token_count,
-                                  const std::size_t hidden_size) {
+        inline void embedding_cpu(const std::size_t token_id, const Tensor& weights, Tensor& output) {
             switch (weights.dtype()) {
             case types::DType::BF16:
-                cpu::kernels::embedding(input_ids.data<std::int32_t>(), weights.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), token_count,
-                                        hidden_size);
+                cpu::kernels::embedding(token_id, weights.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), output.num_elems());
                 return;
             default:
                 throw std::runtime_error("no embedding kernel for this dtype");
@@ -20,11 +18,10 @@ namespace inference::ops {
         }
     } // namespace impl
 
-    inline void embedding(const Tensor& input_ids, const Tensor& weights, Tensor& output, const std::size_t token_count,
-                          const std::size_t hidden_size) {
+    inline void embedding(const std::size_t token_id, const Tensor& weights, Tensor& output) {
         switch (weights.device()) {
         case types::Device::CPU:
-            impl::embedding_cpu(input_ids, weights, output, token_count, hidden_size);
+            impl::embedding_cpu(token_id, weights, output);
             return;
         case types::Device::CUDA:
             throw std::runtime_error("cuda not implemented");

@@ -56,7 +56,8 @@ namespace inference::safetensors {
             auto tensor = Tensor::empty(descriptor.shape, descriptor.dtype, allocator);
             auto source = weight_bytes.subspan(descriptor.data_begin, tensor.size_bytes());
             std::ranges::uninitialized_copy(source, tensor.as_writable_bytes()); // todo this won't work with cuda. maybe we should always first
-                                                                                 // copy to cpu and then transfer tensor to cuda?
+                                                                                 // copy to cpu and then transfer tensor to cuda? or we can
+                                                                                 // create op that will copy depending on the device
             weights.insert(key, std::move(tensor));
         }
 

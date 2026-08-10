@@ -1,5 +1,7 @@
 #pragma once
 #include <memory>
+#include <ranges>
+#include <span>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -44,7 +46,6 @@ namespace inference::model::qwen3 {
         Tensor normalized_query;
         Tensor normalized_key;
         Tensor attention_heads;
-        Tensor attention;
         Tensor projected_attention;
         Tensor mlp_block;
         Tensor gate;
@@ -52,24 +53,20 @@ namespace inference::model::qwen3 {
         Tensor activated;
         Tensor mlp_output;
 
-        // todo I think we can simplify this
-        ScratchSpace(const Config& config, const std::size_t sequence_size, const types::DType dtype,
-                     const std::shared_ptr<allocator::BaseAllocator>& allocator)
-            : hidden_state{Tensor::empty({sequence_size, config.hidden_size}, dtype, allocator)},
-              attention_block{Tensor::empty({sequence_size, config.hidden_size}, dtype, allocator)},
-              query{Tensor::empty({sequence_size, config.num_attention_heads * config.head_dim}, dtype, allocator)},
-              key{Tensor::empty({sequence_size, config.num_key_value_heads * config.head_dim}, dtype, allocator)},
-              value{Tensor::empty({sequence_size, config.num_key_value_heads * config.head_dim}, dtype, allocator)},
-              normalized_query{Tensor::empty({sequence_size, config.num_attention_heads, config.head_dim}, dtype, allocator)},
-              normalized_key{Tensor::empty({sequence_size, config.num_key_value_heads, config.head_dim}, dtype, allocator)},
-              attention_heads{Tensor::empty({sequence_size, config.num_attention_heads, config.head_dim}, dtype, allocator)},
-              attention{attention_heads.reshape({sequence_size, config.num_attention_heads * config.head_dim})},
-              projected_attention{Tensor::empty({sequence_size, config.hidden_size}, dtype, allocator)},
-              mlp_block{Tensor::empty({sequence_size, config.hidden_size}, dtype, allocator)},
-              gate{Tensor::empty({sequence_size, config.intermediate_size}, dtype, allocator)},
-              up{Tensor::empty({sequence_size, config.intermediate_size}, dtype, allocator)},
-              activated{Tensor::empty({sequence_size, config.intermediate_size}, dtype, allocator)},
-              mlp_output{Tensor::empty({sequence_size, config.hidden_size}, dtype, allocator)} { }
+        ScratchSpace(const Config& config, const types::DType dtype, const std::shared_ptr<allocator::BaseAllocator>& allocator)
+            : hidden_state{Tensor::empty({config.hidden_size}, dtype, allocator)},
+              attention_block{Tensor::empty({config.hidden_size}, dtype, allocator)},
+              query{Tensor::empty({config.num_attention_heads * config.head_dim}, dtype, allocator)},
+              key{Tensor::empty({config.num_key_value_heads * config.head_dim}, dtype, allocator)},
+              value{Tensor::empty({config.num_key_value_heads * config.head_dim}, dtype, allocator)},
+              normalized_query{Tensor::empty({config.num_attention_heads * config.head_dim}, dtype, allocator)},
+              normalized_key{Tensor::empty({config.num_key_value_heads * config.head_dim}, dtype, allocator)},
+              attention_heads{Tensor::empty({config.num_attention_heads * config.head_dim}, dtype, allocator)},
+              projected_attention{Tensor::empty({config.hidden_size}, dtype, allocator)},
+              mlp_block{Tensor::empty({config.hidden_size}, dtype, allocator)},
+              gate{Tensor::empty({config.intermediate_size}, dtype, allocator)}, up{Tensor::empty({config.intermediate_size}, dtype, allocator)},
+              activated{Tensor::empty({config.intermediate_size}, dtype, allocator)},
+              mlp_output{Tensor::empty({config.hidden_size}, dtype, allocator)} { }
     };
 
     struct Model {
@@ -79,8 +76,10 @@ namespace inference::model::qwen3 {
         std::vector<Layer> layers;
         Tensor norm;
         Tensor lm_head;
+        ScratchSpace scratch;
 
-        [[nodiscard]] static Model from_weights(const Config& config, Weights weights) {
+        [[nodiscard]] static Model from_weights(const Config& config, Weights weights, Context& context) {
+            const auto& allocator = context.cpu_context.allocator;
             auto model_weights = weights.scope("model");
             auto layer_weights = model_weights.scope("layers");
 
@@ -123,6 +122,8 @@ namespace inference::model::qwen3 {
             }
 
             weights.expect_empty();
+            const auto weights_dtype = embed_tokens.dtype();
+            context.kv_cache = KVCache{layers.size(), config.num_key_value_heads * config.head_dim, weights_dtype, allocator};
 
             return Model{
                 .config = config,
@@ -130,66 +131,64 @@ namespace inference::model::qwen3 {
                 .layers = std::move(layers),
                 .norm = std::move(final_norm),
                 .lm_head = std::move(lm_head),
+                .scratch = ScratchSpace{config, weights_dtype, allocator},
             };
         }
 
-        [[nodiscard]] Tensor forward(const Tensor& input_ids, Context& context) const {
-            const auto sequence_size = input_ids.dim(0);
-
-            // todo
-            if (sequence_size > 1024) {
-                throw std::invalid_argument("can't generate more than 1024 tokens.");
-            }
+        // todo currently we do 0 optimizations for prefill, fine for now since makes the code a little simpler
+        [[nodiscard]] Tensor forward(const std::size_t token_id, Context& context) {
 
             const auto allocator = context.cpu_context.allocator;
             const auto weights_dtype = embed_tokens.dtype();
-            auto scratch = ScratchSpace{config, sequence_size, weights_dtype, allocator};
 
-            const auto query_size = config.num_attention_heads * config.head_dim;
-            const auto key_value_size = config.num_key_value_heads * config.head_dim;
+            auto logits = Tensor::empty({config.vocab_size}, weights_dtype, allocator);
+            ops::embedding(token_id, embed_tokens, scratch.hidden_state);
 
-            auto logits = Tensor::empty({sequence_size, config.vocab_size}, weights_dtype, allocator);
-            ops::embedding(input_ids, embed_tokens, scratch.hidden_state, sequence_size, config.hidden_size);
+            for (auto&& [layer, layer_cache] : std::views::zip(layers, context.kv_cache.layers)) {
+                ops::rmsnorm(scratch.hidden_state, layer.input_layernorm, scratch.attention_block, config.rms_norm_eps);
 
-            for (const auto& layer : layers) {
-                ops::rmsnorm(scratch.hidden_state, layer.input_layernorm, scratch.attention_block, sequence_size, config.hidden_size,
-                             config.rms_norm_eps);
+                ops::matmul(scratch.attention_block, layer.self_attn.q_proj, scratch.query);
 
-                ops::matmul(scratch.attention_block, layer.self_attn.q_proj, scratch.query, sequence_size, query_size, config.hidden_size);
+                ops::matmul(scratch.attention_block, layer.self_attn.k_proj, scratch.key);
+                ops::matmul(scratch.attention_block, layer.self_attn.v_proj, scratch.value);
 
-                ops::matmul(scratch.attention_block, layer.self_attn.k_proj, scratch.key, sequence_size, key_value_size, config.hidden_size);
-                ops::matmul(scratch.attention_block, layer.self_attn.v_proj, scratch.value, sequence_size, key_value_size, config.hidden_size);
+                ops::rmsnorm(scratch.query, layer.self_attn.q_norm, scratch.normalized_query, config.rms_norm_eps);
+                ops::rmsnorm(scratch.key, layer.self_attn.k_norm, scratch.normalized_key, config.rms_norm_eps);
 
-                ops::qk_norm(scratch.query, layer.self_attn.q_norm, scratch.normalized_query, sequence_size * config.num_attention_heads,
-                             config.head_dim, config.rms_norm_eps);
-                ops::qk_norm(scratch.key, layer.self_attn.k_norm, scratch.normalized_key, sequence_size * config.num_key_value_heads,
-                             config.head_dim, config.rms_norm_eps);
-                ops::rope(scratch.normalized_query, sequence_size, config.num_attention_heads, config.head_dim, config.rope_theta);
-                ops::rope(scratch.normalized_key, sequence_size, config.num_key_value_heads, config.head_dim, config.rope_theta);
+                ops::rope(scratch.normalized_query, config.num_attention_heads, config.head_dim, config.rope_theta, context.kv_cache.token_count);
+                ops::rope(scratch.normalized_key, config.num_key_value_heads, config.head_dim, config.rope_theta, context.kv_cache.token_count);
 
-                ops::self_attention(scratch.normalized_query, scratch.normalized_key, scratch.value, scratch.attention_heads, sequence_size,
+                ops::kv_cache_update(scratch.normalized_key, scratch.value, layer_cache.key, layer_cache.value, context.kv_cache.token_count);
+
+                ops::self_attention(scratch.normalized_query, layer_cache.key, layer_cache.value, scratch.attention_heads, context.kv_cache.token_count,
                                     config.num_attention_heads, config.num_key_value_heads, config.head_dim);
 
-                ops::matmul(scratch.attention, layer.self_attn.o_proj, scratch.projected_attention, sequence_size, config.hidden_size,
-                            query_size);
-                ops::add(scratch.hidden_state, scratch.projected_attention, scratch.attention_block, sequence_size * config.hidden_size);
+                ops::matmul(scratch.attention_heads, layer.self_attn.o_proj, scratch.projected_attention);
+                ops::add(scratch.hidden_state, scratch.projected_attention, scratch.attention_block);
                 std::swap(scratch.hidden_state, scratch.attention_block);
 
-                ops::rmsnorm(scratch.hidden_state, layer.post_attention_layernorm, scratch.mlp_block, sequence_size, config.hidden_size,
-                             config.rms_norm_eps);
+                ops::rmsnorm(scratch.hidden_state, layer.post_attention_layernorm, scratch.mlp_block, config.rms_norm_eps);
 
-                ops::matmul(scratch.mlp_block, layer.mlp.gate_proj, scratch.gate, sequence_size, config.intermediate_size, config.hidden_size);
-                ops::matmul(scratch.mlp_block, layer.mlp.up_proj, scratch.up, sequence_size, config.intermediate_size, config.hidden_size);
-                ops::silu_multiply(scratch.gate, scratch.up, scratch.activated, sequence_size * config.intermediate_size);
+                ops::matmul(scratch.mlp_block, layer.mlp.gate_proj, scratch.gate);
+                ops::matmul(scratch.mlp_block, layer.mlp.up_proj, scratch.up);
+                ops::silu_multiply(scratch.gate, scratch.up, scratch.activated);
 
-                ops::matmul(scratch.activated, layer.mlp.down_proj, scratch.mlp_output, sequence_size, config.hidden_size,
-                            config.intermediate_size);
-                ops::add(scratch.hidden_state, scratch.mlp_output, scratch.mlp_block, sequence_size * config.hidden_size);
+                ops::matmul(scratch.activated, layer.mlp.down_proj, scratch.mlp_output);
+                ops::add(scratch.hidden_state, scratch.mlp_output, scratch.mlp_block);
                 std::swap(scratch.hidden_state, scratch.mlp_block);
             }
 
-            ops::rmsnorm(scratch.hidden_state, norm, scratch.attention_block, sequence_size, config.hidden_size, config.rms_norm_eps);
-            ops::matmul(scratch.attention_block, lm_head, logits, sequence_size, config.vocab_size, config.hidden_size);
+            ops::rmsnorm(scratch.hidden_state, norm, scratch.attention_block, config.rms_norm_eps);
+            ops::matmul(scratch.attention_block, lm_head, logits);
+            ++context.kv_cache.token_count;
+            return logits;
+        }
+
+        [[nodiscard]] Tensor prefill(const std::span<const std::size_t> token_ids, Context& context) {
+            auto logits = forward(token_ids.front(), context);
+            for (const auto token_id : token_ids.subspan(1)) {
+                logits = forward(token_id, context);
+            }
             return logits;
         }
     };

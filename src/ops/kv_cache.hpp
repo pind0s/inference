@@ -7,8 +7,7 @@
 namespace inference::ops {
     inline void kv_cache_update(const Tensor& key, const Tensor& value, Tensor& cached_key, Tensor& cached_value,
                                 const std::size_t token_offset) {
-        const auto row_size_bytes = key.size_bytes() / key.dim(0);
-        const auto offset_bytes = token_offset * row_size_bytes;
+        const auto offset_bytes = token_offset * key.size_bytes();
 
         switch (key.device()) {
         case types::Device::CPU:
