@@ -8,12 +8,11 @@
 namespace inference::ops {
     namespace impl {
         inline void rmsnorm_cpu(const Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) {
-            const auto hidden_size = weight.num_elems();
-            const auto row_count = input.num_elems() / hidden_size;
+            const auto row_size = weight.num_elems();
             switch (input.dtype()) {
             case types::DType::BF16:
-                cpu::kernels::rmsnorm(input.data<cpu::bf16_t>(), weight.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), row_count, hidden_size,
-                                      epsilon);
+                cpu::kernels::rmsnorm(input.data<cpu::bf16_t>(), weight.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), input.num_elems(),
+                                      row_size, epsilon);
                 return;
             default:
                 throw std::runtime_error("no rmsnorm kernel for this dtype");

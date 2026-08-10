@@ -56,12 +56,12 @@ namespace inference::model::qwen3 {
         ScratchSpace(const Config& config, const types::DType dtype, const std::shared_ptr<allocator::BaseAllocator>& allocator)
             : hidden_state{Tensor::empty({config.hidden_size}, dtype, allocator)},
               attention_block{Tensor::empty({config.hidden_size}, dtype, allocator)},
-              query{Tensor::empty({config.num_attention_heads * config.head_dim}, dtype, allocator)},
-              key{Tensor::empty({config.num_key_value_heads * config.head_dim}, dtype, allocator)},
-              value{Tensor::empty({config.num_key_value_heads * config.head_dim}, dtype, allocator)},
-              normalized_query{Tensor::empty({config.num_attention_heads * config.head_dim}, dtype, allocator)},
-              normalized_key{Tensor::empty({config.num_key_value_heads * config.head_dim}, dtype, allocator)},
-              attention_heads{Tensor::empty({config.num_attention_heads * config.head_dim}, dtype, allocator)},
+              query{Tensor::empty({config.num_attention_heads, config.head_dim}, dtype, allocator)},
+              key{Tensor::empty({config.num_key_value_heads, config.head_dim}, dtype, allocator)},
+              value{Tensor::empty({config.num_key_value_heads, config.head_dim}, dtype, allocator)},
+              normalized_query{Tensor::empty({config.num_attention_heads, config.head_dim}, dtype, allocator)},
+              normalized_key{Tensor::empty({config.num_key_value_heads, config.head_dim}, dtype, allocator)},
+              attention_heads{Tensor::empty({config.num_attention_heads, config.head_dim}, dtype, allocator)},
               projected_attention{Tensor::empty({config.hidden_size}, dtype, allocator)},
               mlp_block{Tensor::empty({config.hidden_size}, dtype, allocator)},
               gate{Tensor::empty({config.intermediate_size}, dtype, allocator)}, up{Tensor::empty({config.intermediate_size}, dtype, allocator)},
@@ -155,13 +155,14 @@ namespace inference::model::qwen3 {
                 ops::rmsnorm(scratch.query, layer.self_attn.q_norm, scratch.normalized_query, config.rms_norm_eps);
                 ops::rmsnorm(scratch.key, layer.self_attn.k_norm, scratch.normalized_key, config.rms_norm_eps);
 
-                ops::rope(scratch.normalized_query, config.num_attention_heads, config.head_dim, config.rope_theta, context.kv_cache.token_count);
+                ops::rope(scratch.normalized_query, config.num_attention_heads, config.head_dim, config.rope_theta,
+                          context.kv_cache.token_count);
                 ops::rope(scratch.normalized_key, config.num_key_value_heads, config.head_dim, config.rope_theta, context.kv_cache.token_count);
 
                 ops::kv_cache_update(scratch.normalized_key, scratch.value, layer_cache.key, layer_cache.value, context.kv_cache.token_count);
 
-                ops::self_attention(scratch.normalized_query, layer_cache.key, layer_cache.value, scratch.attention_heads, context.kv_cache.token_count,
-                                    config.num_attention_heads, config.num_key_value_heads, config.head_dim);
+                ops::self_attention(scratch.normalized_query, layer_cache.key, layer_cache.value, scratch.attention_heads,
+                                    context.kv_cache.token_count, config.num_attention_heads, config.num_key_value_heads, config.head_dim);
 
                 ops::matmul(scratch.attention_heads, layer.self_attn.o_proj, scratch.projected_attention);
                 ops::add(scratch.hidden_state, scratch.projected_attention, scratch.attention_block);
