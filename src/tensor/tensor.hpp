@@ -58,10 +58,6 @@ namespace inference {
             return shape_;
         }
 
-        [[nodiscard]] const TensorShape& strides() const {
-            return strides_;
-        }
-
         [[nodiscard]] std::size_t rank() const {
             return shape_.rank();
         }
@@ -103,14 +99,6 @@ namespace inference {
             return static_cast<T*>(storage_->data());
         }
 
-        [[nodiscard]] void* raw_data() {
-            return storage_->data();
-        }
-
-        [[nodiscard]] const void* raw_data() const {
-            return storage_->data();
-        }
-
         [[nodiscard]] std::span<const std::byte> as_bytes() const {
             return {static_cast<const std::byte*>(storage_->data()), size_bytes()};
         }
@@ -121,22 +109,10 @@ namespace inference {
 
     private:
         Tensor(std::shared_ptr<Storage> storage, const TensorShape& shape, types::DType dtype)
-            : storage_{std::move(storage)}, shape_{shape}, strides_{make_contiguous_strides(shape_)}, dtype_{dtype} { }
-
-        [[nodiscard]] static TensorShape make_contiguous_strides(const TensorShape& shape) {
-            std::array<std::size_t, TensorShape::MAX_RANK> values{};
-            std::size_t stride = 1;
-
-            for (std::size_t index = shape.rank(); index > 0; --index) {
-                values[index - 1] = stride;
-                stride *= shape[index - 1];
-            }
-            return TensorShape{std::span<const std::size_t>{values.data(), shape.rank()}};
-        }
+            : storage_{std::move(storage)}, shape_{shape}, dtype_{dtype} { }
 
         std::shared_ptr<Storage> storage_;
         TensorShape shape_;
-        TensorShape strides_;
         types::DType dtype_;
     };
 } // namespace inference
