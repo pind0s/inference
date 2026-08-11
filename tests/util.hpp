@@ -12,10 +12,10 @@ namespace test {
         return std::filesystem::path{TEST_RESOURCE_DIR};
     }
 
-    [[nodiscard]] inline std::vector<inference::cpu::bf16_t> random_bf16_vector(const std::size_t size, const std::uint32_t seed = 0) {
-        static std::mt19937 engine{seed};
+    [[nodiscard]] inline std::vector<inference::cpu::bf16_t> random_bf16_vector(const std::size_t size) {
+        static std::mt19937 engine{0};
         std::uniform_real_distribution distribution{-1.0F, 1.0F};
-        std::vector<inference::cpu::bf16_t> values(size);
+        std::vector<inference::cpu::bf16_t> values(size); // todo this potentially allocates unaligned, we need to fix this :(
         std::ranges::generate(values, [&] { return inference::cpu::bf16_t::from_float(distribution(engine)); });
         return values;
     }

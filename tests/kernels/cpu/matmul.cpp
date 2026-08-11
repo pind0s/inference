@@ -36,5 +36,11 @@ TEST_P(MatmulGemmTest, MatchesReference) {
     }
 }
 
-constexpr auto shapes = {MatmulShape{48, 151936, 1024}, MatmulShape{48, 3072, 1024}, MatmulShape{48, 1024, 3072}};
+constexpr auto shapes = {
+    MatmulShape{48, 18992, 1024},
+    MatmulShape{48, 3072, 1024},
+    MatmulShape{48, 1024, 3072},
+    MatmulShape{1, 1, 31},
+    MatmulShape{3, 5, 33},
+};
 INSTANTIATE_TEST_SUITE_P(Shapes, MatmulGemmTest, testing::ValuesIn(shapes));

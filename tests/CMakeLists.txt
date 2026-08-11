@@ -5,7 +5,7 @@ add_executable(inference_tests
         kernels/cpu/matmul.cpp
         tokenizer.cpp)
 
-target_include_directories(inference_tests PUBLIC .)
+target_include_directories(inference_tests PRIVATE .)
 
 target_compile_definitions(inference_tests
         PRIVATE
