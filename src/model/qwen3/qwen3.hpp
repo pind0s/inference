@@ -2,7 +2,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -52,6 +51,7 @@ namespace inference::model::qwen3 {
         Tensor up;
         Tensor activated;
         Tensor mlp_output;
+        Tensor logits;
 
         ScratchSpace(const Config& config, const types::DType dtype, const std::shared_ptr<allocator::BaseAllocator>& allocator)
             : hidden_state{Tensor::empty({config.hidden_size}, dtype, allocator)},
@@ -66,7 +66,8 @@ namespace inference::model::qwen3 {
               mlp_block{Tensor::empty({config.hidden_size}, dtype, allocator)},
               gate{Tensor::empty({config.intermediate_size}, dtype, allocator)}, up{Tensor::empty({config.intermediate_size}, dtype, allocator)},
               activated{Tensor::empty({config.intermediate_size}, dtype, allocator)},
-              mlp_output{Tensor::empty({config.hidden_size}, dtype, allocator)} { }
+              mlp_output{Tensor::empty({config.hidden_size}, dtype, allocator)},
+              logits{Tensor::empty({config.vocab_size}, dtype, allocator)} {}
     };
 
     struct Model {
@@ -137,11 +138,10 @@ namespace inference::model::qwen3 {
 
         // todo currently we do 0 optimizations for prefill, fine for now since makes the code a little simpler
         [[nodiscard]] Tensor forward(const std::size_t token_id, Context& context) {
-
+            const auto token_pos = context.kv_cache.token_count;
             const auto allocator = context.cpu_context.allocator;
             const auto weights_dtype = embed_tokens.dtype();
 
-            auto logits = Tensor::empty({config.vocab_size}, weights_dtype, allocator);
             ops::embedding(token_id, embed_tokens, scratch.hidden_state);
 
             for (auto&& [layer, layer_cache] : std::views::zip(layers, context.kv_cache.layers)) {
@@ -155,14 +155,13 @@ namespace inference::model::qwen3 {
                 ops::rmsnorm(scratch.query, layer.self_attn.q_norm, scratch.normalized_query, config.rms_norm_eps);
                 ops::rmsnorm(scratch.key, layer.self_attn.k_norm, scratch.normalized_key, config.rms_norm_eps);
 
-                ops::rope(scratch.normalized_query, config.num_attention_heads, config.head_dim, config.rope_theta,
-                          context.kv_cache.token_count);
+                ops::rope(scratch.normalized_query, config.num_attention_heads, config.head_dim, config.rope_theta, token_pos);
                 ops::rope(scratch.normalized_key, config.num_key_value_heads, config.head_dim, config.rope_theta, context.kv_cache.token_count);
 
                 ops::kv_cache_update(scratch.normalized_key, scratch.value, layer_cache.key, layer_cache.value, context.kv_cache.token_count);
 
-                ops::self_attention(scratch.normalized_query, layer_cache.key, layer_cache.value, scratch.attention_heads,
-                                    context.kv_cache.token_count, config.num_attention_heads, config.num_key_value_heads, config.head_dim);
+                ops::self_attention(scratch.normalized_query, layer_cache.key, layer_cache.value, scratch.attention_heads, token_pos,
+                                    config.num_attention_heads, config.num_key_value_heads, config.head_dim);
 
                 ops::matmul(scratch.attention_heads, layer.self_attn.o_proj, scratch.projected_attention);
                 ops::add(scratch.hidden_state, scratch.projected_attention, scratch.attention_block);
@@ -180,9 +179,9 @@ namespace inference::model::qwen3 {
             }
 
             ops::rmsnorm(scratch.hidden_state, norm, scratch.attention_block, config.rms_norm_eps);
-            ops::matmul(scratch.attention_block, lm_head, logits);
+            ops::matmul(scratch.attention_block, lm_head, scratch.logits);
             ++context.kv_cache.token_count;
-            return logits;
+            return scratch.logits;
         }
 
         [[nodiscard]] Tensor prefill(const std::span<const std::size_t> token_ids, Context& context) {
