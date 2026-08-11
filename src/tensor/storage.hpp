@@ -4,11 +4,9 @@
 #include <utility>
 
 #include "allocator/allocator.hpp"
-#include "util/move_only.hpp"
 
 namespace inference {
-    // todo I don't think Storage is move only? i think we need to redesign this
-    class Storage : util::MoveOnly {
+    class Storage {
     public:
         Storage(std::shared_ptr<allocator::BaseAllocator> resource, std::size_t size_bytes)
             : resource_{std::move(resource)}, size_bytes_{size_bytes} {
@@ -26,6 +24,8 @@ namespace inference {
 
         Storage(const Storage&) = delete;
         Storage& operator=(const Storage&) = delete;
+        Storage(Storage&&) = delete;
+        Storage& operator=(Storage&&) = delete;
 
         [[nodiscard]] void* data() {
             return data_;
