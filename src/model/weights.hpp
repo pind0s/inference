@@ -7,10 +7,9 @@
 #include <utility>
 
 #include "tensor/tensor.hpp"
-#include "util/move_only.hpp"
 
 namespace inference {
-    class Weights : util::MoveOnly {
+    class Weights {
     public:
         Weights(): tensors_{std::make_shared<TensorMap>()} { }
 
@@ -20,11 +19,11 @@ namespace inference {
 
         [[nodiscard]] Tensor take(const std::string_view name) {
             const auto name_with_prefix = full_name(name);
-            const auto node = tensors_->extract(name_with_prefix);
+            auto node = tensors_->extract(name_with_prefix);
             if (node.empty()) {
                 throw std::invalid_argument("No weights found for '" + name_with_prefix + "'");
             }
-            return std::move(node.mapped());
+            return node.mapped();
         }
 
         [[nodiscard]] Weights scope(const std::string_view name) const {
@@ -33,7 +32,7 @@ namespace inference {
             return Weights{tensors_, std::move(prefix)};
         }
 
-        [[nodiscard]] Weights scope(const std::size_t index) {
+        [[nodiscard]] Weights scope(const std::size_t index) const {
             return scope(std::to_string(index));
         }
 
