@@ -13,7 +13,7 @@ namespace inference::types {
         I64,
     };
 
-    [[nodiscard]] inline std::size_t dtype_size(const DType dtype) {
+    [[nodiscard]] inline std::size_t dtype_byte_size(const DType dtype) {
         switch (dtype) {
         case DType::F16:
         case DType::BF16:

@@ -53,7 +53,7 @@ namespace inference::model::qwen3 {
         Tensor mlp_output;
         Tensor logits;
 
-        ScratchSpace(const Config& config, const types::DType dtype, const std::shared_ptr<allocator::BaseAllocator>& allocator)
+        ScratchSpace(const Config& config, const types::DType dtype, const std::shared_ptr<allocator::Allocator>& allocator)
             : hidden_state{ Tensor::empty({ config.hidden_size }, dtype, allocator) },
               attention_block{ Tensor::empty({ config.hidden_size }, dtype, allocator) },
               query{ Tensor::empty({ config.num_attention_heads, config.head_dim }, dtype, allocator) },
@@ -90,7 +90,7 @@ namespace inference::model::qwen3 {
             auto lm_head = weights.take("lm_head.weight");
 
             if (config.tie_word_embeddings) {
-                lm_head = Tensor::from_storage(embed_tokens.storage(), embed_tokens.shape(), embed_tokens.dtype());
+                lm_head = embed_tokens;
             }
 
             std::vector<Layer> layers;
