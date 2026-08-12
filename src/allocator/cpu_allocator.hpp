@@ -2,7 +2,7 @@
 #include "allocator.hpp"
 
 namespace inference::allocator {
-    class CpuAllocator : public BaseAllocator {
+    class CpuAllocator : public Allocator {
     public:
         static constexpr std::size_t alignment = 64;
 

@@ -13,16 +13,16 @@
 namespace inference {
     class Tensor {
     public:
-        [[nodiscard]] static Tensor empty(const TensorShape& shape, types::DType dtype, std::shared_ptr<allocator::BaseAllocator> allocator) {
-            auto storage = std::make_shared<Storage>(std::move(allocator), shape.element_count() * dtype_size(dtype));
+        [[nodiscard]] static Tensor empty(const TensorShape& shape, types::DType dtype, std::shared_ptr<allocator::Allocator> allocator) {
+            auto storage = std::make_shared<Storage>(std::move(allocator), shape.element_count() * dtype_byte_size(dtype));
             return Tensor{ std::move(storage), shape, dtype };
         }
 
         template <typename T>
         [[nodiscard]]
         static Tensor from_vector(const std::vector<T>& values, const TensorShape& shape, types::DType dtype,
-                                  std::shared_ptr<allocator::BaseAllocator> allocator) {
-            const auto expected_size_bytes = shape.element_count() * dtype_size(dtype);
+                                  std::shared_ptr<allocator::Allocator> allocator) {
+            const auto expected_size_bytes = shape.element_count() * dtype_byte_size(dtype);
             const auto supplied_size_bytes = values.size() * sizeof(T);
             if (supplied_size_bytes != expected_size_bytes) {
                 throw std::invalid_argument("tensor shape and dtype do not match the supplied data size");
@@ -73,7 +73,7 @@ namespace inference {
         }
 
         [[nodiscard]] std::size_t size_bytes() const {
-            return num_elems() * dtype_size(dtype_);
+            return num_elems() * dtype_byte_size(dtype_);
         }
 
         [[nodiscard]] types::DType dtype() const {

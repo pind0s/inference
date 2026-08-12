@@ -33,7 +33,7 @@ namespace inference::safetensors {
 
     // todo add support for models that are sharded into multiple files
     // todo add support for manual mapped files
-    [[nodiscard]] inline Weights load_weights_from_dir(const std::filesystem::path& path, const std::shared_ptr<allocator::BaseAllocator>& allocator) {
+    [[nodiscard]] inline Weights load_weights_from_dir(const std::filesystem::path& path, const std::shared_ptr<allocator::Allocator>& allocator) {
         Weights weights;
 
         const auto file = util::read_file(util::require_file(path / "model.safetensors")).value();

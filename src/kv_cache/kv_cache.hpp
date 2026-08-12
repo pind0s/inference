@@ -20,7 +20,7 @@ namespace inference {
         KVCache() = default;
 
         KVCache(const std::size_t layer_count, const std::size_t row_size, const types::DType dtype,
-                const std::shared_ptr<allocator::BaseAllocator>& allocator) {
+                const std::shared_ptr<allocator::Allocator>& allocator) {
             layers.reserve(layer_count);
             for (std::size_t index = 0; index < layer_count; ++index) {
                 layers.push_back({ Tensor::empty({ capacity, row_size }, dtype, allocator), Tensor::empty({ capacity, row_size }, dtype, allocator) });

@@ -8,16 +8,16 @@
 namespace inference {
     class Storage {
     public:
-        Storage(std::shared_ptr<allocator::BaseAllocator> resource, std::size_t size_bytes): resource_{ std::move(resource) }, size_bytes_{ size_bytes } {
-            if (!resource_) {
-                throw std::invalid_argument("storage memory resource cannot be null");
+        Storage(std::shared_ptr<allocator::Allocator> resource, std::size_t size_bytes): allocator_{ std::move(resource) }, size_bytes_{ size_bytes } {
+            if (!allocator_) {
+                throw std::invalid_argument("allocator for storage is nullptr");
             }
-            data_ = resource_->allocate(size_bytes_);
+            data_ = allocator_->allocate(size_bytes_);
         }
 
         ~Storage() {
             if (data_ != nullptr) {
-                resource_->deallocate(data_);
+                allocator_->deallocate(data_);
             }
         }
 
@@ -39,11 +39,11 @@ namespace inference {
         }
 
         [[nodiscard]] types::Device device() const {
-            return resource_->device();
+            return allocator_->device();
         }
 
     private:
-        std::shared_ptr<allocator::BaseAllocator> resource_;
+        std::shared_ptr<allocator::Allocator> allocator_;
         void* data_ = nullptr;
         std::size_t size_bytes_;
     };

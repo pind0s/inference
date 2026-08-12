@@ -2,9 +2,9 @@
 #include "types/device.hpp"
 
 namespace inference::allocator {
-    class BaseAllocator {
+    class Allocator {
     public:
-        virtual ~BaseAllocator() = default;
+        virtual ~Allocator() = default;
 
         [[nodiscard]] virtual void* allocate(std::size_t size_bytes) = 0;
         virtual void deallocate(void* pointer) noexcept = 0;
