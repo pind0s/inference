@@ -9,9 +9,9 @@ namespace inference {
 
         constexpr TensorShape() noexcept = default;
 
-        constexpr TensorShape(std::initializer_list<std::size_t> dimensions): TensorShape{std::span(dimensions)} { }
+        constexpr TensorShape(std::initializer_list<std::size_t> dimensions): TensorShape{ std::span(dimensions) } { }
 
-        constexpr TensorShape(const std::span<const std::size_t> dimensions): rank_{dimensions.size()} {
+        constexpr TensorShape(const std::span<const std::size_t> dimensions): rank_{ dimensions.size() } {
             if (dimensions.size() > MAX_RANK) {
                 throw std::length_error("tensor rank cannot exceed 5 dimensions");
             }

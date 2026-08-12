@@ -1,13 +1,13 @@
 #pragma once
-#include <filesystem>
-#include <memory>
-#include <nlohmann/json.hpp>
-#include <string>
-
 #include "allocator/allocator.hpp"
 #include "model/weights.hpp"
 #include "tensor/tensor.hpp"
 #include "util/files.hpp"
+
+#include <filesystem>
+#include <memory>
+#include <nlohmann/json.hpp>
+#include <string>
 
 namespace inference::safetensors {
     struct TensorDescriptor {
@@ -33,12 +33,11 @@ namespace inference::safetensors {
 
     // todo add support for models that are sharded into multiple files
     // todo add support for manual mapped files
-    [[nodiscard]] inline Weights load_weights_from_dir(const std::filesystem::path& path,
-                                                       const std::shared_ptr<allocator::BaseAllocator>& allocator) {
+    [[nodiscard]] inline Weights load_weights_from_dir(const std::filesystem::path& path, const std::shared_ptr<allocator::BaseAllocator>& allocator) {
         Weights weights;
 
         const auto file = util::read_file(util::require_file(path / "model.safetensors")).value();
-        const auto file_bytes = std::span{file};
+        const auto file_bytes = std::span{ file };
 
         std::uint64_t header_size{};
         std::memcpy(&header_size, file_bytes.data(), sizeof header_size);
@@ -55,9 +54,10 @@ namespace inference::safetensors {
             const auto descriptor = TensorDescriptor::from_json(value);
             auto tensor = Tensor::empty(descriptor.shape, descriptor.dtype, allocator);
             auto source = weight_bytes.subspan(descriptor.data_begin, tensor.size_bytes());
-            std::ranges::uninitialized_copy(source, tensor.as_writable_bytes()); // todo this won't work with cuda. maybe we should always first
-                                                                                 // copy to cpu and then transfer tensor to cuda? or we can
-                                                                                 // create op that will copy depending on the device
+            std::ranges::uninitialized_copy(source, tensor.as_writable_bytes());
+            // todo this won't work with cuda. maybe we should always first
+            //  copy to cpu and then transfer tensor to cuda? or we can
+            //  create op that will copy depending on the device
             weights.insert(key, std::move(tensor));
         }
 

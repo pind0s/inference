@@ -1,8 +1,8 @@
 #pragma once
+#include "tensor/tensor.hpp"
+
 #include <memory>
 #include <vector>
-
-#include "tensor/tensor.hpp"
 
 namespace inference {
     struct KVCache {
@@ -23,7 +23,7 @@ namespace inference {
                 const std::shared_ptr<allocator::BaseAllocator>& allocator) {
             layers.reserve(layer_count);
             for (std::size_t index = 0; index < layer_count; ++index) {
-                layers.push_back({Tensor::empty({capacity, row_size}, dtype, allocator), Tensor::empty({capacity, row_size}, dtype, allocator)});
+                layers.push_back({ Tensor::empty({ capacity, row_size }, dtype, allocator), Tensor::empty({ capacity, row_size }, dtype, allocator) });
             }
         }
 

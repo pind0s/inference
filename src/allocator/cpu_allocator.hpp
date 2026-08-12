@@ -11,11 +11,11 @@ namespace inference::allocator {
                 return nullptr;
             }
 
-            return operator new(size_bytes, std::align_val_t{alignment});
+            return operator new(size_bytes, std::align_val_t{ alignment });
         }
 
         void deallocate(void* pointer) noexcept override {
-            operator delete(pointer, std::align_val_t{alignment});
+            operator delete(pointer, std::align_val_t{ alignment });
         }
 
         [[nodiscard]] types::Device device() const override {

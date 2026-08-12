@@ -1,13 +1,13 @@
 #pragma once
-#include <algorithm>
-
 #include "cpu/bf16.hpp"
+
+#include <algorithm>
 
 namespace inference::cpu::kernels {
     // todo cache blocking, look into _mm512_maskz_loadu_epi16 for tail, also clean up code a lil
     // https://en.algorithmica.org/hpc/algorithms/matmul/
-    inline void matmul_avx512bf16(const bf16_t* __restrict a, const bf16_t* __restrict b_transposed, bf16_t* __restrict output,
-                                  const std::size_t M, const std::size_t N, const std::size_t K) noexcept {
+    inline void matmul_avx512bf16(const bf16_t* __restrict a, const bf16_t* __restrict b_transposed, bf16_t* __restrict output, const std::size_t M,
+                                  const std::size_t N, const std::size_t K) noexcept {
         const auto tile_rows = (M + 3) / 4;
         const auto tile_columns = (N + 3) / 4;
         const auto tile_count = tile_rows * tile_columns;

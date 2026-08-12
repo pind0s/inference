@@ -1,10 +1,9 @@
 #pragma once
+#include "cpu/bf16.hpp"
 
 #include <cmath>
 
-#include "cpu/bf16.hpp"
 namespace inference::cpu::kernels {
-
     inline void add(const bf16_t* __restrict lhs, const bf16_t* __restrict rhs, bf16_t* __restrict out, std::size_t N) {
         const std::size_t vectorized = N - (N % 16);
         [[omp::directive(parallel loop)]] for (std::size_t index = 0; index < vectorized; index += 16) {
@@ -24,8 +23,7 @@ namespace inference::cpu::kernels {
         }
     }
 
-    inline void silu_multiply(const bf16_t* __restrict gate, const bf16_t* __restrict up, bf16_t* __restrict output,
-                              const std::size_t element_count) noexcept {
+    inline void silu_multiply(const bf16_t* __restrict gate, const bf16_t* __restrict up, bf16_t* __restrict output, const std::size_t element_count) {
         for (std::size_t index = 0; index < element_count; ++index) {
             const auto gate_value = gate[index].to_float();
             const auto silu = gate_value / (1.0F + std::exp(-gate_value));

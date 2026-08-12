@@ -1,9 +1,8 @@
 #pragma once
-
-#include <stdexcept>
-
 #include "cpu/kernels/rmsnorm.hpp"
 #include "tensor/tensor.hpp"
+
+#include <stdexcept>
 
 namespace inference::ops {
     namespace impl {
@@ -11,8 +10,8 @@ namespace inference::ops {
             const auto row_size = weight.num_elems();
             switch (input.dtype()) {
             case types::DType::BF16:
-                cpu::kernels::rmsnorm(input.data<cpu::bf16_t>(), weight.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), input.num_elems(),
-                                      row_size, epsilon);
+                cpu::kernels::rmsnorm(input.data<cpu::bf16_t>(), weight.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), input.num_elems(), row_size,
+                                      epsilon);
                 return;
             default:
                 throw std::runtime_error("no rmsnorm kernel for this dtype");

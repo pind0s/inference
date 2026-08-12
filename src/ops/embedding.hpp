@@ -1,9 +1,8 @@
 #pragma once
-
-#include <stdexcept>
-
 #include "cpu/kernels/embedding.hpp"
 #include "tensor/tensor.hpp"
+
+#include <stdexcept>
 
 namespace inference::ops {
     namespace impl {

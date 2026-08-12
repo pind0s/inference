@@ -1,11 +1,10 @@
 #pragma once
+#include "cpu/bf16.hpp"
 
 #include <cmath>
 
-#include "cpu/bf16.hpp"
 namespace inference::cpu::kernels {
-    inline void rope(bf16_t* __restrict values, const std::size_t head_count, const std::size_t head_size, const float theta,
-                     const std::size_t pos) {
+    inline void rope(bf16_t* __restrict values, const std::size_t head_count, const std::size_t head_size, const float theta, const std::size_t pos) {
         const auto half_size = head_size / 2;
 
         for (std::size_t head = 0; head < head_count; ++head) {

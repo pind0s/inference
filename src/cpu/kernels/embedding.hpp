@@ -1,8 +1,6 @@
 #pragma once
-
-#include <cstddef>
-
 #include "cpu/bf16.hpp"
+
 namespace inference::cpu::kernels {
     inline void embedding(const std::size_t token_id, const bf16_t* __restrict weights, bf16_t* __restrict output,
                           const std::size_t hidden_size) noexcept {

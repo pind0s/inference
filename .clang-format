@@ -1,29 +1,23 @@
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: true
 AlignEscapedNewlines: Left
 AlignOperands: Align
-AlignTrailingComments:
-  Kind: Never
-  OverEmptyLines: 0
+AlignTrailingComments: false
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
-AllowBreakBeforeNoexceptSpecifier: OnlyWithParen
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortCaseExpressionOnASingleLine: false
-AllowShortCompoundRequirementOnASingleLine: true
 AllowShortLambdasOnASingleLine: Inline
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: false
-AllowShortNamespacesOnASingleLine: false
+BreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
+BreakTemplateDeclarations: Yes
 BasedOnStyle: WebKit
 BinPackArguments: true
-BinPackLongBracedList: true
 BinPackParameters: BinPack
 BitFieldColonSpacing: None
-BracedInitializerIndentWidth: 4
 BraceWrapping:
   AfterCaseLabel: false
   AfterClass: false
@@ -46,24 +40,17 @@ BraceWrapping:
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
 BreakInheritanceList: BeforeColon
-BreakAfterAttributes: Leave
-BreakAfterReturnType: Automatic
-BreakAdjacentStringLiterals: true
-BreakBinaryOperations: Never
-BreakBeforeConceptDeclarations: Allowed
-BreakBeforeTemplateCloser: false
+BreakBeforeConceptDeclarations: Never
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializers: BeforeColon
-BreakFunctionDefinitionParameters: false
+BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
-BreakTemplateDeclarations: Yes
-ColumnLimit: 145
+ColumnLimit: 155
 CompactNamespaces: false
+PackConstructorInitializers: CurrentLine
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
-Cpp11BracedListStyle: true
 DerivePointerAlignment: false
-EmptyLineAfterAccessModifier: Never
 EmptyLineBeforeAccessModifier: Always
 ExperimentalAutoDetectBinPacking: false
 FixNamespaceComments: true
@@ -72,22 +59,10 @@ IndentCaseLabels: false
 IndentExternBlock: Indent
 IndentGotoLabels: false
 IndentPPDirectives: BeforeHash
-IndentRequiresClause: true
-IndentWidth: 4
 IndentWrappedFunctionNames: false
-InsertBraces: false
-InsertNewlineAtEOF: true
 InsertTrailingCommas: None
 Language: Cpp
-LambdaBodyIndentation: Signature
-LineEnding: DeriveLF
-KeepEmptyLines:
-  AtEndOfFile: false
-  AtStartOfBlock: true
-  AtStartOfFile: true
-MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
-PackConstructorInitializers: BinPack
 PenaltyBreakAssignment: 2
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
@@ -98,35 +73,24 @@ PenaltyExcessCharacter: 1000000
 PenaltyIndentedWhitespace: 0
 PenaltyReturnTypeOnItsOwnLine: 60
 PointerAlignment: Left
-QualifierAlignment: Leave
-ReferenceAlignment: Pointer
-ReflowComments: Always
-RemoveBracesLLVM: false
-RemoveParentheses: Leave
-RemoveSemicolon: false
-RequiresClausePosition: OwnLine
-RequiresExpressionIndentation: OuterScope
-SeparateDefinitionBlocks: Leave
-ShortNamespaceLines: 1
-SkipMacroDefinitionBody: false
+ReflowComments: IndentOnly
+IncludeBlocks: Regroup
 SortIncludes:
   Enabled: true
-  IgnoreCase: false
-IncludeBlocks: Regroup
-IncludeIsMainRegex: 'a^'
+  IgnoreCase: true
+  IgnoreExtension: false
 IncludeCategories:
-  - Regex: '^<'
+  - Regex: '^"'
     Priority: 1
     SortPriority: 1
-    CaseSensitive: true
-  - Regex: '^"'
+    CaseSensitive: false
+  - Regex: '^<'
     Priority: 2
     SortPriority: 2
-    CaseSensitive: true
+    CaseSensitive: false
 SortUsingDeclarations: LexicographicNumeric
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
-SpaceAfterOperatorKeyword: false
 SpaceAfterTemplateKeyword: true
 SpaceAroundPointerQualifiers: Default
 SpaceBeforeAssignmentOperators: true
@@ -137,11 +101,14 @@ SpaceBeforeInheritanceColon: true
 SpaceBeforeParens: ControlStatements
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
-SpaceInEmptyBlock: true
+SpaceInEmptyBraces: Block
+SpacesInParens: Never
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: Never
 SpacesInContainerLiterals: true
-SpacesInParens: Never
 SpacesInSquareBrackets: false
 Standard: Latest
 TabWidth: 8
+LineEnding: LF
+RequiresExpressionIndentation: OuterScope
+BinPackLongBracedList: true

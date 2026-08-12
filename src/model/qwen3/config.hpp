@@ -1,8 +1,8 @@
 #pragma once
+#include "types/activation.hpp"
+
 #include <nlohmann/json.hpp>
 #include <string>
-
-#include "types/activation.hpp"
 
 namespace inference::model::qwen3 {
     struct Config {

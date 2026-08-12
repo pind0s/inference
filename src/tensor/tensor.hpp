@@ -1,4 +1,8 @@
 #pragma once
+#include "storage.hpp"
+#include "tensor_shape.hpp"
+#include "types/dtype.hpp"
+
 #include <memory>
 #include <span>
 #include <stdexcept>
@@ -6,17 +10,12 @@
 #include <utility>
 #include <vector>
 
-#include "storage.hpp"
-#include "tensor_shape.hpp"
-#include "types/dtype.hpp"
-#include "util/move_only.hpp"
-
 namespace inference {
-    class Tensor : util::MoveOnly {
+    class Tensor {
     public:
         [[nodiscard]] static Tensor empty(const TensorShape& shape, types::DType dtype, std::shared_ptr<allocator::BaseAllocator> allocator) {
             auto storage = std::make_shared<Storage>(std::move(allocator), shape.element_count() * dtype_size(dtype));
-            return Tensor{std::move(storage), shape, dtype};
+            return Tensor{ std::move(storage), shape, dtype };
         }
 
         template <typename T>
@@ -30,7 +29,7 @@ namespace inference {
             }
 
             auto result = empty(shape, dtype, std::move(allocator));
-            auto destination = std::span<T>{result.data<T>(), values.size()};
+            auto destination = std::span<T>{ result.data<T>(), values.size() };
             std::ranges::uninitialized_copy(values, destination);
             return result;
         }
@@ -40,7 +39,7 @@ namespace inference {
                 throw std::invalid_argument("tensor storage cannot be null");
             }
 
-            Tensor result{std::move(storage), shape, dtype};
+            Tensor result{ std::move(storage), shape, dtype };
             if (result.size_bytes() > result.storage_->size_bytes()) {
                 throw std::invalid_argument("tensor shape exceeds the supplied storage");
             }
@@ -51,7 +50,7 @@ namespace inference {
             if (shape.element_count() != shape_.element_count()) {
                 throw std::invalid_argument("reshape cannot change the number of tensor elements");
             }
-            return Tensor{storage_, shape, dtype_};
+            return Tensor{ storage_, shape, dtype_ };
         }
 
         [[nodiscard]] const TensorShape& shape() const {
@@ -100,16 +99,18 @@ namespace inference {
         }
 
         [[nodiscard]] std::span<const std::byte> as_bytes() const {
-            return {static_cast<const std::byte*>(storage_->data()), size_bytes()};
+            return { static_cast<const std::byte*>(storage_->data()), size_bytes() };
         }
 
         [[nodiscard]] std::span<std::byte> as_writable_bytes() {
-            return {static_cast<std::byte*>(storage_->data()), size_bytes()};
+            return { static_cast<std::byte*>(storage_->data()), size_bytes() };
         }
 
     private:
         Tensor(std::shared_ptr<Storage> storage, const TensorShape& shape, types::DType dtype)
-            : storage_{std::move(storage)}, shape_{shape}, dtype_{dtype} { }
+            : storage_{ std::move(storage) },
+              shape_{ shape },
+              dtype_{ dtype } { }
 
         std::shared_ptr<Storage> storage_;
         TensorShape shape_;

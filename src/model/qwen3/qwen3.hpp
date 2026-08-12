@@ -1,15 +1,15 @@
 #pragma once
-#include <memory>
-#include <ranges>
-#include <span>
-#include <utility>
-#include <vector>
-
 #include "config.hpp"
 #include "model/weights.hpp"
 #include "ops/ops.hpp"
 #include "runtime/context.hpp"
 #include "tensor/tensor.hpp"
+
+#include <memory>
+#include <ranges>
+#include <span>
+#include <utility>
+#include <vector>
 
 namespace inference::model::qwen3 {
 
@@ -54,20 +54,21 @@ namespace inference::model::qwen3 {
         Tensor logits;
 
         ScratchSpace(const Config& config, const types::DType dtype, const std::shared_ptr<allocator::BaseAllocator>& allocator)
-            : hidden_state{Tensor::empty({config.hidden_size}, dtype, allocator)},
-              attention_block{Tensor::empty({config.hidden_size}, dtype, allocator)},
-              query{Tensor::empty({config.num_attention_heads, config.head_dim}, dtype, allocator)},
-              key{Tensor::empty({config.num_key_value_heads, config.head_dim}, dtype, allocator)},
-              value{Tensor::empty({config.num_key_value_heads, config.head_dim}, dtype, allocator)},
-              normalized_query{Tensor::empty({config.num_attention_heads, config.head_dim}, dtype, allocator)},
-              normalized_key{Tensor::empty({config.num_key_value_heads, config.head_dim}, dtype, allocator)},
-              attention_heads{Tensor::empty({config.num_attention_heads, config.head_dim}, dtype, allocator)},
-              projected_attention{Tensor::empty({config.hidden_size}, dtype, allocator)},
-              mlp_block{Tensor::empty({config.hidden_size}, dtype, allocator)},
-              gate{Tensor::empty({config.intermediate_size}, dtype, allocator)}, up{Tensor::empty({config.intermediate_size}, dtype, allocator)},
-              activated{Tensor::empty({config.intermediate_size}, dtype, allocator)},
-              mlp_output{Tensor::empty({config.hidden_size}, dtype, allocator)},
-              logits{Tensor::empty({config.vocab_size}, dtype, allocator)} {}
+            : hidden_state{ Tensor::empty({ config.hidden_size }, dtype, allocator) },
+              attention_block{ Tensor::empty({ config.hidden_size }, dtype, allocator) },
+              query{ Tensor::empty({ config.num_attention_heads, config.head_dim }, dtype, allocator) },
+              key{ Tensor::empty({ config.num_key_value_heads, config.head_dim }, dtype, allocator) },
+              value{ Tensor::empty({ config.num_key_value_heads, config.head_dim }, dtype, allocator) },
+              normalized_query{ Tensor::empty({ config.num_attention_heads, config.head_dim }, dtype, allocator) },
+              normalized_key{ Tensor::empty({ config.num_key_value_heads, config.head_dim }, dtype, allocator) },
+              attention_heads{ Tensor::empty({ config.num_attention_heads, config.head_dim }, dtype, allocator) },
+              projected_attention{ Tensor::empty({ config.hidden_size }, dtype, allocator) },
+              mlp_block{ Tensor::empty({ config.hidden_size }, dtype, allocator) },
+              gate{ Tensor::empty({ config.intermediate_size }, dtype, allocator) },
+              up{ Tensor::empty({ config.intermediate_size }, dtype, allocator) },
+              activated{ Tensor::empty({ config.intermediate_size }, dtype, allocator) },
+              mlp_output{ Tensor::empty({ config.hidden_size }, dtype, allocator) },
+              logits{ Tensor::empty({ config.vocab_size }, dtype, allocator) } { }
     };
 
     struct Model {
@@ -124,7 +125,7 @@ namespace inference::model::qwen3 {
 
             weights.expect_empty();
             const auto weights_dtype = embed_tokens.dtype();
-            context.kv_cache = KVCache{layers.size(), config.num_key_value_heads * config.head_dim, weights_dtype, allocator};
+            context.kv_cache = KVCache{ layers.size(), config.num_key_value_heads * config.head_dim, weights_dtype, allocator };
 
             return Model{
                 .config = config,
@@ -132,7 +133,7 @@ namespace inference::model::qwen3 {
                 .layers = std::move(layers),
                 .norm = std::move(final_norm),
                 .lm_head = std::move(lm_head),
-                .scratch = ScratchSpace{config, weights_dtype, allocator},
+                .scratch = ScratchSpace{ config, weights_dtype, allocator },
             };
         }
 

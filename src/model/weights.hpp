@@ -1,4 +1,6 @@
 #pragma once
+#include "tensor/tensor.hpp"
+
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -6,12 +8,10 @@
 #include <unordered_map>
 #include <utility>
 
-#include "tensor/tensor.hpp"
-
 namespace inference {
     class Weights {
     public:
-        Weights(): tensors_{std::make_shared<TensorMap>()} { }
+        Weights(): tensors_{ std::make_shared<TensorMap>() } { }
 
         void insert(const std::string& name, Tensor tensor) {
             tensors_->emplace(name, std::move(tensor));
@@ -29,7 +29,7 @@ namespace inference {
         [[nodiscard]] Weights scope(const std::string_view name) const {
             auto prefix = full_name(name);
             prefix.push_back('.');
-            return Weights{tensors_, std::move(prefix)};
+            return Weights{ tensors_, std::move(prefix) };
         }
 
         [[nodiscard]] Weights scope(const std::size_t index) const {
@@ -45,7 +45,7 @@ namespace inference {
     private:
         using TensorMap = std::unordered_map<std::string, Tensor>;
 
-        Weights(std::shared_ptr<TensorMap> tensors, std::string prefix): tensors_{std::move(tensors)}, prefix_{std::move(prefix)} { }
+        Weights(std::shared_ptr<TensorMap> tensors, std::string prefix): tensors_{ std::move(tensors) }, prefix_{ std::move(prefix) } { }
 
         [[nodiscard]] std::string full_name(const std::string_view name) const {
             return prefix_ + std::string(name);

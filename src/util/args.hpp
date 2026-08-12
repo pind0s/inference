@@ -1,9 +1,9 @@
 #pragma once
+#include "util/files.hpp"
+
 #include <argparse/argparse.hpp>
 #include <filesystem>
 #include <string>
-
-#include "util/files.hpp"
 
 namespace util {
     struct Args {
@@ -13,7 +13,7 @@ namespace util {
         std::filesystem::path model_config_path;
 
         [[nodiscard]] static Args parse_args(const int argc, char* argv[]) {
-            argparse::ArgumentParser parser{"inference engine", "1.0"};
+            argparse::ArgumentParser parser{ "inference engine", "1.0" };
             parser.add_description("Inference engine");
             parser.add_epilog("TODO epilog"); // todo
             parser.add_argument("-m", "--model").help("path that contains the model").required();

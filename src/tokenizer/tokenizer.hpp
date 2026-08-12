@@ -27,8 +27,7 @@ namespace inference {
 
     class Tokenizer {
     public:
-        [[nodiscard]] static Tokenizer load_tokenizer(const std::filesystem::path& tokenizer_path,
-                                                      const std::filesystem::path& tokenizer_config_path);
+        [[nodiscard]] static Tokenizer load_tokenizer(const std::filesystem::path& tokenizer_path, const std::filesystem::path& tokenizer_config_path);
 
         [[nodiscard]] TokenList tokenize(const std::string& prompt) const;
         [[nodiscard]] std::string decode(const TokenList& token_list) const;

@@ -1,11 +1,11 @@
 #pragma once
+#include "cpu/bf16.hpp"
 
 #include <cmath>
 
-#include "cpu/bf16.hpp"
 namespace inference::cpu::kernels {
-    inline void rmsnorm(const bf16_t* __restrict input, const bf16_t* __restrict weight, bf16_t* __restrict output,
-                        const std::size_t element_count, const std::size_t row_size, const float epsilon) {
+    inline void rmsnorm(const bf16_t* __restrict input, const bf16_t* __restrict weight, bf16_t* __restrict output, const std::size_t element_count,
+                        const std::size_t row_size, const float epsilon) {
 
         for (std::size_t row = 0; row < element_count; row += row_size) {
             float sum_of_squares = 0.0F;

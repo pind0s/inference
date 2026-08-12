@@ -1,12 +1,11 @@
 #pragma once
-#include <stdexcept>
-
 #include "cpu/kernels/kv_cache.hpp"
 #include "tensor/tensor.hpp"
 
+#include <stdexcept>
+
 namespace inference::ops {
-    inline void kv_cache_update(const Tensor& key, const Tensor& value, Tensor& cached_key, Tensor& cached_value,
-                                const std::size_t token_offset) {
+    inline void kv_cache_update(const Tensor& key, const Tensor& value, Tensor& cached_key, Tensor& cached_value, const std::size_t token_offset) {
         const auto offset_bytes = token_offset * key.size_bytes();
 
         switch (key.device()) {

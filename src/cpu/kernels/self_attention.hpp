@@ -1,15 +1,14 @@
 #pragma once
+#include "cpu/bf16.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <vector>
-
-#include "cpu/bf16.hpp"
 namespace inference::cpu::kernels {
-    inline void self_attention(const bf16_t* __restrict query, const bf16_t* __restrict key, const bf16_t* __restrict value,
-                               bf16_t* __restrict output, const std::size_t position, const std::size_t query_head_count,
-                               const std::size_t key_value_head_count, const std::size_t head_size) {
+    inline void self_attention(const bf16_t* __restrict query, const bf16_t* __restrict key, const bf16_t* __restrict value, bf16_t* __restrict output,
+                               const std::size_t position, const std::size_t query_head_count, const std::size_t key_value_head_count,
+                               const std::size_t head_size) {
         const auto queries_per_key_value = query_head_count / key_value_head_count;
         const auto attention_scale = 1.0F / std::sqrt(static_cast<float>(head_size));
 

@@ -1,9 +1,8 @@
 #pragma once
-
-#include <stdexcept>
-
 #include "cpu/kernels/matmul.hpp"
 #include "tensor/tensor.hpp"
+
+#include <stdexcept>
 
 namespace inference::ops {
     namespace impl {
@@ -12,8 +11,8 @@ namespace inference::ops {
             const auto rows = input.num_elems() / weights.dim(1);
             switch (input.dtype()) {
             case types::DType::BF16:
-                cpu::kernels::matmul_avx512bf16(input.data<cpu::bf16_t>(), weights.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), rows,
-                                                weights.dim(0), weights.dim(1));
+                cpu::kernels::matmul_avx512bf16(input.data<cpu::bf16_t>(), weights.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), rows, weights.dim(0),
+                                                weights.dim(1));
                 return;
             default:
                 throw std::runtime_error("no matmul kernel for this dtype");
