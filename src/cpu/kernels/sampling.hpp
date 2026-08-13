@@ -13,12 +13,11 @@ namespace inference::cpu::kernels {
         std::size_t i = 0;
         constexpr std::size_t lanes = 16;
         for (; i + lanes <= num_elems; i += lanes) {
-            const auto bf16 = avx::load<avx::bf16x16>(&logits[i]);
-            const auto values = avx::bf16_to_f32(bf16);
+            const auto values = avx::load_bf16_as_f32(&logits[i]);
 
             const auto larger = _mm512_cmp_ps_mask(values, current_max, _CMP_GT_OQ);
             if (larger != 0) [[unlikely]] {
-                max_value = _mm512_reduce_max_ps(values);
+                max_value = avx::reduce_max(values);
                 current_max = avx::broadcast<avx::f32x16>(max_value);
                 block_index = i;
             }

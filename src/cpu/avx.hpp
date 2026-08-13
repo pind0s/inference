@@ -10,29 +10,53 @@ namespace inference::cpu::avx {
     using bf16x32 = __bf16 __attribute__((vector_size(32 * sizeof(__bf16))));
 
     template <typename vector_t, typename scalar_t>
-    [[gnu::always_inline]] vector_t broadcast(const scalar_t value) {
+    [[nodiscard]] [[gnu::always_inline]] vector_t broadcast(const scalar_t value) noexcept {
         using element_t = std::remove_cvref_t<decltype(vector_t{}[0])>;
         return vector_t{} + static_cast<element_t>(value);
     }
 
     template <typename vector_t, typename scalar_t>
-    [[gnu::always_inline]] vector_t load(const scalar_t* ptr) {
+    [[nodiscard]] [[gnu::always_inline]] vector_t load(const scalar_t* ptr) noexcept {
         vector_t result;
         std::memcpy(&result, ptr, sizeof(result));
         return result;
     }
 
     template <typename vector_t, typename scalar_t>
-    [[gnu::always_inline]] void store(scalar_t* ptr, const vector_t& vector) {
+    [[gnu::always_inline]] void store(scalar_t* ptr, const vector_t& vector) noexcept {
         std::memcpy(ptr, &vector, sizeof(vector));
     }
 
-    [[gnu::always_inline]] inline bf16x16 f32_to_bf16(const f32x16 value) {
+    [[nodiscard]] [[gnu::always_inline]] inline bf16x16 f32_to_bf16(const f32x16 value) noexcept {
         return _mm512_cvtneps_pbh(value);
     }
 
-    [[gnu::always_inline]] inline f32x16 bf16_to_f32(const bf16x16 value) {
+    [[nodiscard]] [[gnu::always_inline]] inline f32x16 bf16_to_f32(const bf16x16 value) noexcept {
         return _mm512_cvtpbh_ps(value);
+    }
+
+    [[nodiscard]] [[gnu::always_inline]] inline f32x16 load_bf16_as_f32(const __bf16* ptr) noexcept {
+        return bf16_to_f32(load<bf16x16>(ptr));
+    }
+
+    [[gnu::always_inline]] inline void store_f32_as_bf16(__bf16* ptr, const f32x16 value) noexcept {
+        store(ptr, f32_to_bf16(value));
+    }
+
+    [[nodiscard]] [[gnu::always_inline]] inline float reduce_add(const f32x16 value) noexcept {
+        return _mm512_reduce_add_ps(value);
+    }
+
+    [[nodiscard]] [[gnu::always_inline]] inline float reduce_mul(const f32x16 value) noexcept {
+        return _mm512_reduce_mul_ps(value);
+    }
+
+    [[nodiscard]] [[gnu::always_inline]] inline float reduce_min(const f32x16 value) noexcept {
+        return _mm512_reduce_min_ps(value);
+    }
+
+    [[nodiscard]] [[gnu::always_inline]] inline float reduce_max(const f32x16 value) noexcept {
+        return _mm512_reduce_max_ps(value);
     }
 
 } // namespace inference::cpu::avx

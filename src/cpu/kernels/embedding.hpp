@@ -1,6 +1,4 @@
 #pragma once
-#include "cpu/bf16.hpp"
-
 #include <cstddef>
 
 namespace inference::cpu::kernels {

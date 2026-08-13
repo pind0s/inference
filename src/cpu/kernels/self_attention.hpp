@@ -1,6 +1,5 @@
 #pragma once
 #include "cpu/avx.hpp"
-#include "cpu/bf16.hpp"
 #include <algorithm>
 #include <cmath>
 #include <immintrin.h>
@@ -23,7 +22,7 @@ namespace inference::cpu::kernels {
                 const auto key_base = (key_position * key_value_head_count + key_value_head) * head_size;
                 float score = 0.0F;
                 for (std::size_t index = 0; index < head_size; ++index) {
-                    score += bf16::to_float(query[query_base + index]) * bf16::to_float(key[key_base + index]);
+                    score += static_cast<float>(query[query_base + index]) * static_cast<float>(key[key_base + index]);
                 }
                 scores[key_position] = score * attention_scale;
                 maximum_score = std::max(maximum_score, scores[key_position]);
@@ -39,9 +38,9 @@ namespace inference::cpu::kernels {
                 float result = 0.0F;
                 for (std::size_t key_position = 0; key_position <= position; ++key_position) {
                     const auto value_base = (key_position * key_value_head_count + key_value_head) * head_size;
-                    result += scores[key_position] / score_sum * bf16::to_float(value[value_base + index]);
+                    result += scores[key_position] / score_sum * static_cast<float>(value[value_base + index]);
                 }
-                output[query_base + index] = bf16::from_float(result);
+                output[query_base + index] = static_cast<__bf16>(result);
             }
         }
     }
@@ -75,16 +74,14 @@ namespace inference::cpu::kernels {
                 }
 
                 for (; index + lanes <= head_size; index += lanes) {
-                    const auto q = avx::load<avx::bf16x16>(&query[query_base + index]);
-                    const auto k = avx::load<avx::bf16x16>(&key[key_base + index]);
-                    const auto q_f32 = avx::bf16_to_f32(q);
-                    const auto k_f32 = avx::bf16_to_f32(k);
+                    const auto q_f32 = avx::load_bf16_as_f32(&query[query_base + index]);
+                    const auto k_f32 = avx::load_bf16_as_f32(&key[key_base + index]);
                     score_accumulator = _mm512_fmadd_ps(q_f32, k_f32, score_accumulator);
                 }
 
-                auto score = _mm512_reduce_add_ps(score_accumulator);
+                auto score = avx::reduce_add(score_accumulator);
                 for (; index < head_size; ++index) {
-                    score += bf16::to_float(query[query_base + index]) * bf16::to_float(key[key_base + index]);
+                    score += static_cast<float>(query[query_base + index]) * static_cast<float>(key[key_base + index]);
                 }
 
                 scores[key_position] = score * attention_scale;
@@ -101,7 +98,7 @@ namespace inference::cpu::kernels {
                 }
 
                 avx::store(&scores[key_position], scores_vec);
-                score_sum += _mm512_reduce_add_ps(scores_vec);
+                score_sum += avx::reduce_add(scores_vec);
             }
 
             // tail
@@ -115,20 +112,20 @@ namespace inference::cpu::kernels {
                 avx::f32x16 result{};
                 for (std::size_t key_position = 0; key_position < scores.size(); ++key_position) {
                     const auto value_base = (key_position * num_kv_heads + key_value_head) * head_size;
-                    const auto values = avx::load<avx::bf16x16>(&value[value_base + index]);
+                    const auto values = avx::load_bf16_as_f32(&value[value_base + index]);
                     const auto weight = scores[key_position] / score_sum;
-                    result += avx::bf16_to_f32(values) * weight;
+                    result += values * weight;
                 }
-                avx::store(&output[query_base + index], avx::f32_to_bf16(result));
+                avx::store_f32_as_bf16(&output[query_base + index], result);
             }
 
             for (; index < head_size; ++index) {
                 float result = 0.0F;
                 for (std::size_t key_position = 0; key_position < scores.size(); ++key_position) {
                     const auto value_base = (key_position * num_kv_heads + key_value_head) * head_size;
-                    result += scores[key_position] / score_sum * bf16::to_float(value[value_base + index]);
+                    result += scores[key_position] / score_sum * static_cast<float>(value[value_base + index]);
                 }
-                output[query_base + index] = bf16::from_float(result);
+                output[query_base + index] = static_cast<__bf16>(result);
             }
         }
     }

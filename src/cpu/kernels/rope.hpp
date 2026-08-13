@@ -1,6 +1,4 @@
 #pragma once
-#include "cpu/bf16.hpp"
-
 #include <cmath>
 
 namespace inference::cpu::kernels {
@@ -14,11 +12,11 @@ namespace inference::cpu::kernels {
                 const auto angle = static_cast<float>(pos) / std::pow(theta, exponent);
                 const auto cosine = std::cos(angle);
                 const auto sine = std::sin(angle);
-                const auto first = bf16::to_float(values[base + index]);
-                const auto second = bf16::to_float(values[base + half_size + index]);
+                const auto first = static_cast<float>(values[base + index]);
+                const auto second = static_cast<float>(values[base + half_size + index]);
 
-                values[base + index] = bf16::from_float(first * cosine - second * sine);
-                values[base + half_size + index] = bf16::from_float(second * cosine + first * sine);
+                values[base + index] = static_cast<__bf16>(first * cosine - second * sine);
+                values[base + half_size + index] = static_cast<__bf16>(second * cosine + first * sine);
             }
         }
     }

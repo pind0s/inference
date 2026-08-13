@@ -5,8 +5,6 @@
 #include <random>
 #include <vector>
 
-#include "cpu/bf16.hpp"
-
 namespace test {
     [[nodiscard]] inline std::filesystem::path resource_path() {
         return std::filesystem::path{TEST_RESOURCE_DIR};
@@ -18,7 +16,7 @@ namespace test {
         auto max = std::numeric_limits<__bf16>::max();
         std::uniform_real_distribution distribution(static_cast<float>(min), static_cast<float>(max));
         std::vector<__bf16> values(size);
-        std::ranges::generate(values, [&] { return inference::cpu::bf16::from_float(distribution(engine)); });
+        std::ranges::generate(values, [&] { return static_cast<__bf16>(distribution(engine)); });
         return values;
     }
 } // namespace test

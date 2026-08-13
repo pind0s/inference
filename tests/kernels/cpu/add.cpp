@@ -1,4 +1,3 @@
-#include "cpu/bf16.hpp"
 #include "cpu/kernels/elementwise.hpp"
 #include "util.hpp"
 
@@ -22,7 +21,7 @@ TEST_P(AddTest, MatchesReference) {
     cpu::kernels::add(lhs.data(), rhs.data(), actual_output.data(), element_count);
 
     for (const auto [reference, actual] : std::views::zip(reference_output, actual_output)) {
-        EXPECT_FLOAT_EQ(cpu::bf16::to_float(reference), cpu::bf16::to_float(actual));
+        EXPECT_FLOAT_EQ(static_cast<float>(reference), static_cast<float>(actual));
     }
 }
 

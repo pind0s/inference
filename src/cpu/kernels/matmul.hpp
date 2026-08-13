@@ -1,5 +1,5 @@
 #pragma once
-#include "cpu/bf16.hpp"
+#include "cpu/avx.hpp"
 
 #include <algorithm>
 #include <immintrin.h>
@@ -48,11 +48,11 @@ namespace inference::cpu::kernels {
 
             for (std::size_t i = 0; i < rows; ++i) {
                 for (std::size_t j = 0; j < columns; ++j) {
-                    float sum = _mm512_reduce_add_ps(accum[i][j]);
+                    float sum = avx::reduce_add(accum[i][j]);
                     for (std::size_t tail = p; tail < K; ++tail) {
-                        sum += bf16::to_float(a[(x + i) * K + tail]) * bf16::to_float(b_transposed[(y + j) * K + tail]);
+                        sum += static_cast<float>(a[(x + i) * K + tail]) * static_cast<float>(b_transposed[(y + j) * K + tail]);
                     }
-                    output[(x + i) * N + (y + j)] = bf16::from_float(sum);
+                    output[(x + i) * N + (y + j)] = static_cast<__bf16>(sum);
                 }
             }
         }
@@ -65,9 +65,9 @@ namespace inference::cpu::kernels {
                 for (std::size_t column = 0; column < N; ++column) {
                     float sum = 0.0F;
                     for (std::size_t inner = 0; inner < K; ++inner) {
-                        sum += bf16::to_float(a[row * K + inner]) * bf16::to_float(b[column * K + inner]);
+                        sum += static_cast<float>(a[row * K + inner]) * static_cast<float>(b[column * K + inner]);
                     }
-                    output[row * N + column] = bf16::from_float(sum);
+                    output[row * N + column] = static_cast<__bf16>(sum);
                 }
             }
         }

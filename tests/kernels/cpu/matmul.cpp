@@ -1,7 +1,6 @@
 
 #include "cpu/kernels/matmul.hpp"
 
-#include "cpu/bf16.hpp"
 #include "util.hpp"
 
 #include <cmath>
@@ -31,8 +30,8 @@ TEST_P(MatmulGemmTest, MatchesReference) {
     cpu::kernels::matmul_avx512bf16(a.data(), b.data(), actual_output.data(), m, n, k);
 
     for (const auto [reference, actual] : std::views::zip(reference_output, actual_output)) {
-        const auto tolerance = 0.01F + (0.01F * std::abs(cpu::bf16::to_float(actual)));
-        EXPECT_NEAR(cpu::bf16::to_float(reference), cpu::bf16::to_float(actual), tolerance);
+        const auto tolerance = 0.01F + (0.01F * std::abs(static_cast<float>(actual)));
+        EXPECT_NEAR(static_cast<float>(reference), static_cast<float>(actual), tolerance);
     }
 }
 
