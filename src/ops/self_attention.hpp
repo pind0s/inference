@@ -10,8 +10,8 @@ namespace inference::ops {
                                        const std::size_t query_head_count, const std::size_t key_value_head_count, const std::size_t head_size) {
             switch (query.dtype()) {
             case types::DType::BF16:
-                cpu::kernels::self_attention(query.data<__bf16>(), key.data<__bf16>(), value.data<__bf16>(), output.data<__bf16>(), position,
-                                             query_head_count, key_value_head_count, head_size);
+                cpu::kernels::self_attention_optimized(query.data<__bf16>(), key.data<__bf16>(), value.data<__bf16>(), output.data<__bf16>(), position,
+                                                       query_head_count, key_value_head_count, head_size);
                 return;
             default:
                 throw std::runtime_error("no self_attention kernel for this dtype");
