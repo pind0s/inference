@@ -2,12 +2,13 @@
 #include "cpu/bf16.hpp"
 
 #include <algorithm>
+#include <immintrin.h>
 
 namespace inference::cpu::kernels {
     // todo cache blocking, look into _mm512_maskz_loadu_epi16 for tail, also clean up code a lil
     // https://en.algorithmica.org/hpc/algorithms/matmul/
-    inline void matmul_avx512bf16(const bf16_t* __restrict a, const bf16_t* __restrict b_transposed, bf16_t* __restrict output, const std::size_t M,
-                                  const std::size_t N, const std::size_t K) noexcept {
+    inline void matmul_avx512bf16(const __bf16* __restrict a, const __bf16* __restrict b_transposed, __bf16* __restrict output, const std::size_t M,
+                                  const std::size_t N, const std::size_t K) {
         const auto tile_rows = (M + 3) / 4;
         const auto tile_columns = (N + 3) / 4;
         const auto tile_count = tile_rows * tile_columns;
@@ -49,12 +50,26 @@ namespace inference::cpu::kernels {
                 for (std::size_t j = 0; j < columns; ++j) {
                     float sum = _mm512_reduce_add_ps(accum[i][j]);
                     for (std::size_t tail = p; tail < K; ++tail) {
-                        sum += a[(x + i) * K + tail].to_float() * b_transposed[(y + j) * K + tail].to_float();
+                        sum += bf16::to_float(a[(x + i) * K + tail]) * bf16::to_float(b_transposed[(y + j) * K + tail]);
                     }
-                    output[(x + i) * N + (y + j)] = bf16_t::from_float(sum);
+                    output[(x + i) * N + (y + j)] = bf16::from_float(sum);
                 }
             }
         }
     }
 
+    namespace reference {
+        inline void naive_matmul_bf16(const __bf16* __restrict a, const __bf16* __restrict b, __bf16* __restrict output, const std::size_t M,
+                                      const std::size_t N, const std::size_t K) noexcept {
+            for (std::size_t row = 0; row < M; ++row) {
+                for (std::size_t column = 0; column < N; ++column) {
+                    float sum = 0.0F;
+                    for (std::size_t inner = 0; inner < K; ++inner) {
+                        sum += bf16::to_float(a[row * K + inner]) * bf16::to_float(b[column * K + inner]);
+                    }
+                    output[row * N + column] = bf16::from_float(sum);
+                }
+            }
+        }
+    } // namespace reference
 } // namespace inference::cpu::kernels

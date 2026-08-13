@@ -11,8 +11,7 @@ namespace inference::ops {
             const auto rows = input.num_elems() / weights.dim(1);
             switch (input.dtype()) {
             case types::DType::BF16:
-                cpu::kernels::matmul_avx512bf16(input.data<cpu::bf16_t>(), weights.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), rows, weights.dim(0),
-                                                weights.dim(1));
+                cpu::kernels::matmul_avx512bf16(input.data<__bf16>(), weights.data<__bf16>(), output.data<__bf16>(), rows, weights.dim(0), weights.dim(1));
                 return;
             default:
                 throw std::runtime_error("no matmul kernel for this dtype");

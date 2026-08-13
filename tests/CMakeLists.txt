@@ -15,6 +15,7 @@ target_compile_definitions(inference_tests
 target_link_libraries(inference_tests
         PRIVATE
         inference_lib
+        inference_cpu
         GTest::gmock_main
 )
 

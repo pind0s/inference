@@ -5,8 +5,9 @@
 #include <cmath>
 #include <limits>
 #include <vector>
+
 namespace inference::cpu::kernels {
-    inline void self_attention(const bf16_t* __restrict query, const bf16_t* __restrict key, const bf16_t* __restrict value, bf16_t* __restrict output,
+    inline void self_attention(const __bf16* __restrict query, const __bf16* __restrict key, const __bf16* __restrict value, __bf16* __restrict output,
                                const std::size_t position, const std::size_t query_head_count, const std::size_t key_value_head_count,
                                const std::size_t head_size) {
         const auto queries_per_key_value = query_head_count / key_value_head_count;
@@ -22,7 +23,7 @@ namespace inference::cpu::kernels {
                 const auto key_base = (key_position * key_value_head_count + key_value_head) * head_size;
                 float score = 0.0F;
                 for (std::size_t index = 0; index < head_size; ++index) {
-                    score += query[query_base + index].to_float() * key[key_base + index].to_float();
+                    score += bf16::to_float(query[query_base + index]) * bf16::to_float(key[key_base + index]);
                 }
                 scores[key_position] = score * attention_scale;
                 maximum_score = std::max(maximum_score, scores[key_position]);
@@ -38,9 +39,9 @@ namespace inference::cpu::kernels {
                 float result = 0.0F;
                 for (std::size_t key_position = 0; key_position <= position; ++key_position) {
                     const auto value_base = (key_position * key_value_head_count + key_value_head) * head_size;
-                    result += scores[key_position] / score_sum * value[value_base + index].to_float();
+                    result += scores[key_position] / score_sum * bf16::to_float(value[value_base + index]);
                 }
-                output[query_base + index] = bf16_t::from_float(result);
+                output[query_base + index] = bf16::from_float(result);
             }
         }
     }

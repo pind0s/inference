@@ -9,7 +9,7 @@ namespace inference::ops {
         inline void embedding_cpu(const std::size_t token_id, const Tensor& weights, Tensor& output) {
             switch (weights.dtype()) {
             case types::DType::BF16:
-                cpu::kernels::embedding(token_id, weights.data<cpu::bf16_t>(), output.data<cpu::bf16_t>(), output.num_elems());
+                cpu::kernels::embedding(token_id, weights.data<__bf16>(), output.data<__bf16>(), output.num_elems());
                 return;
             default:
                 throw std::runtime_error("no embedding kernel for this dtype");
