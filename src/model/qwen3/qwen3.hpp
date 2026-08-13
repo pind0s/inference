@@ -140,8 +140,6 @@ namespace inference::model::qwen3 {
         // todo currently we do 0 optimizations for prefill, fine for now since makes the code a little simpler
         [[nodiscard]] Tensor forward(const std::size_t token_id, Context& context) {
             const auto token_pos = context.kv_cache.token_count;
-            const auto allocator = context.cpu_context.allocator;
-            const auto weights_dtype = embed_tokens.dtype();
 
             ops::embedding(token_id, embed_tokens, scratch.hidden_state);
 
@@ -165,8 +163,7 @@ namespace inference::model::qwen3 {
                                     config.num_attention_heads, config.num_key_value_heads, config.head_dim);
 
                 ops::matmul(scratch.attention_heads, layer.self_attn.o_proj, scratch.projected_attention);
-                ops::add(scratch.hidden_state, scratch.projected_attention, scratch.attention_block);
-                std::swap(scratch.hidden_state, scratch.attention_block);
+                ops::add(scratch.hidden_state, scratch.projected_attention, scratch.hidden_state);
 
                 ops::rmsnorm(scratch.hidden_state, layer.post_attention_layernorm, scratch.mlp_block, config.rms_norm_eps);
 
@@ -175,8 +172,7 @@ namespace inference::model::qwen3 {
                 ops::silu_multiply(scratch.gate, scratch.up, scratch.activated);
 
                 ops::matmul(scratch.activated, layer.mlp.down_proj, scratch.mlp_output);
-                ops::add(scratch.hidden_state, scratch.mlp_output, scratch.mlp_block);
-                std::swap(scratch.hidden_state, scratch.mlp_block);
+                ops::add(scratch.hidden_state, scratch.mlp_output, scratch.hidden_state);
             }
 
             ops::rmsnorm(scratch.hidden_state, norm, scratch.attention_block, config.rms_norm_eps);
@@ -187,7 +183,7 @@ namespace inference::model::qwen3 {
 
         [[nodiscard]] Tensor prefill(const std::span<const std::size_t> token_ids, Context& context) {
             auto logits = forward(token_ids.front(), context);
-            for (const auto token_id : token_ids.subspan(1)) {
+            for (const auto token_id : token_ids | std::views::drop(1)) {
                 logits = forward(token_id, context);
             }
             return logits;
