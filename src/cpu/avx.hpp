@@ -1,11 +1,19 @@
 #pragma once
 #include <cstring>
+#include <immintrin.h>
+#include <type_traits>
 
 namespace inference::cpu::avx {
     using f32x8 = float __attribute__((vector_size(8 * sizeof(float))));
     using f32x16 = float __attribute__((vector_size(16 * sizeof(float))));
     using bf16x16 = __bf16 __attribute__((vector_size(16 * sizeof(__bf16))));
     using bf16x32 = __bf16 __attribute__((vector_size(32 * sizeof(__bf16))));
+
+    template <typename vector_t, typename scalar_t>
+    [[gnu::always_inline]] vector_t broadcast(const scalar_t value) {
+        using element_t = std::remove_cvref_t<decltype(vector_t{}[0])>;
+        return vector_t{} + static_cast<element_t>(value);
+    }
 
     template <typename vector_t, typename scalar_t>
     [[gnu::always_inline]] vector_t load(const scalar_t* ptr) {

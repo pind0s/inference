@@ -5,4 +5,5 @@
 #include "matmul.hpp"
 #include "rmsnorm.hpp"
 #include "rope.hpp"
+#include "sampling.hpp"
 #include "self_attention.hpp"

@@ -74,7 +74,7 @@ PenaltyIndentedWhitespace: 0
 PenaltyReturnTypeOnItsOwnLine: 60
 PointerAlignment: Left
 ReflowComments: IndentOnly
-IncludeBlocks: Regroup
+IncludeBlocks: Merge
 SortIncludes:
   Enabled: true
   IgnoreCase: true

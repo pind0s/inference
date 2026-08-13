@@ -3,6 +3,7 @@ find_package(GTest CONFIG REQUIRED)
 add_executable(inference_tests
         kernels/cpu/add.cpp
         kernels/cpu/matmul.cpp
+        kernels/cpu/sampling.cpp
         tokenizer.cpp)
 
 target_include_directories(inference_tests PRIVATE .)
