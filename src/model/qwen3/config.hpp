@@ -1,12 +1,12 @@
 #pragma once
 #include "types/activation.hpp"
-
 #include <nlohmann/json.hpp>
 #include <string>
 
 namespace inference::model::qwen3 {
     struct Config {
         std::string model_type;
+        std::size_t eos_token_id{};
         std::size_t head_dim{};
         types::Activation hidden_act{};
         std::size_t hidden_size{};
@@ -26,6 +26,7 @@ namespace inference::model::qwen3 {
         [[nodiscard]] static Config from_json(const nlohmann::json& json) {
             Config config;
             json.at("model_type").get_to(config.model_type);
+            json.at("eos_token_id").get_to(config.eos_token_id);
             json.at("head_dim").get_to(config.head_dim);
             json.at("hidden_size").get_to(config.hidden_size);
             json.at("intermediate_size").get_to(config.intermediate_size);

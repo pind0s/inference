@@ -4,7 +4,6 @@
 #include "ops/ops.hpp"
 #include "runtime/context.hpp"
 #include "tensor/tensor.hpp"
-
 #include <memory>
 #include <ranges>
 #include <span>
@@ -80,7 +79,7 @@ namespace inference::model::qwen3 {
         Tensor lm_head;
         ScratchSpace scratch;
 
-        [[nodiscard]] static Model from_weights(const Config& config, Weights weights, Context& context) {
+        [[nodiscard]] static Model from_weights(const Config& config, Weights weights, Context& context, const std::size_t max_sequence_length) {
             const auto& allocator = context.cpu_context.allocator;
             auto model_weights = weights.scope("model");
             auto layer_weights = model_weights.scope("layers");
@@ -125,7 +124,7 @@ namespace inference::model::qwen3 {
 
             weights.expect_empty();
             const auto weights_dtype = embed_tokens.dtype();
-            context.kv_cache = KVCache{ layers.size(), config.num_key_value_heads * config.head_dim, weights_dtype, allocator };
+            context.kv_cache = KVCache{ layers.size(), config.num_key_value_heads * config.head_dim, max_sequence_length, weights_dtype, allocator };
 
             return Model{
                 .config = config,

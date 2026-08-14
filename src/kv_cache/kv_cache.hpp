@@ -1,26 +1,24 @@
 #pragma once
 #include "tensor/tensor.hpp"
-
 #include <memory>
 #include <vector>
 
 namespace inference {
     struct KVCache {
-        // todo
-        static constexpr std::size_t capacity = 1024;
-
         struct Layer {
             Tensor key;
             Tensor value;
         };
 
         std::vector<Layer> layers; // todo
+        std::size_t capacity = 0;
         std::size_t token_count = 0;
 
         KVCache() = default;
 
-        KVCache(const std::size_t layer_count, const std::size_t row_size, const types::DType dtype,
-                const std::shared_ptr<allocator::Allocator>& allocator) {
+        KVCache(const std::size_t layer_count, const std::size_t row_size, const std::size_t capacity, const types::DType dtype,
+                const std::shared_ptr<allocator::Allocator>& allocator)
+            : capacity(capacity) {
             layers.reserve(layer_count);
             for (std::size_t index = 0; index < layer_count; ++index) {
                 layers.push_back({ Tensor::empty({ capacity, row_size }, dtype, allocator), Tensor::empty({ capacity, row_size }, dtype, allocator) });
