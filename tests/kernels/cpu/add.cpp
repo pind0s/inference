@@ -14,14 +14,14 @@ TEST_P(AddTest, MatchesReference) {
     const auto lhs = test::random_bf16_vector(element_count);
     const auto rhs = test::random_bf16_vector(element_count);
 
-    std::vector<__bf16> reference_output(element_count);
-    std::vector<__bf16> actual_output(element_count);
+    std::vector<__bf16> expected_vec(element_count);
+    std::vector<__bf16> actual_vec(element_count);
 
-    cpu::kernels::reference::add(lhs.data(), rhs.data(), reference_output.data(), element_count);
-    cpu::kernels::add(lhs.data(), rhs.data(), actual_output.data(), element_count);
+    cpu::kernels::reference::add(lhs.data(), rhs.data(), expected_vec.data(), element_count);
+    cpu::kernels::add(lhs.data(), rhs.data(), actual_vec.data(), element_count);
 
-    for (const auto [reference, actual] : std::views::zip(reference_output, actual_output)) {
-        EXPECT_FLOAT_EQ(static_cast<float>(reference), static_cast<float>(actual));
+    for (const auto [expected, actual] : std::views::zip(expected_vec, actual_vec)) {
+        EXPECT_FLOAT_EQ(expected, actual);
     }
 }
 

@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) try {
     const auto input_tokens = tokenizer.tokenize(apply_chat_template(prompt));
     TokenList response_tokens;
 
-    constexpr std::size_t MAX_NEW_TOKENS = 50;
+    constexpr std::size_t MAX_NEW_TOKENS = 200;
 
     auto logits = model.prefill(input_tokens, runtime_context);
     const auto generation_start = std::chrono::steady_clock::now();

@@ -11,10 +11,10 @@ TEST_P(ArgmaxTest, MatchesReference) {
 
     const auto logits = test::random_bf16_vector(element_count);
 
-    const auto expected_index = std::max_element(logits.data(), logits.data() + element_count) - logits.data();
-    const auto actual_index = cpu::kernels::argmax_avx(logits.data(), element_count);
+    const auto expected = std::max_element(logits.data(), logits.data() + element_count) - logits.data();
+    const auto actual = cpu::kernels::argmax_avx512bf16(logits.data(), element_count);
 
-    EXPECT_EQ(expected_index, actual_index);
+    EXPECT_EQ(expected, actual);
 }
 
 constexpr auto element_counts = { std::size_t{ 1 },  std::size_t{ 15 }, std::size_t{ 16 }, std::size_t{ 17 },

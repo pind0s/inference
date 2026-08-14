@@ -3,7 +3,6 @@
 #include "model/weights.hpp"
 #include "tensor/tensor.hpp"
 #include "util/files.hpp"
-
 #include <filesystem>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -17,17 +16,14 @@ namespace inference::safetensors {
         TensorShape shape;
 
         [[nodiscard]] static TensorDescriptor from_json(const nlohmann::json& json) {
-            TensorDescriptor result;
-
-            result.dtype = types::dtype_from_string(json.at("dtype").get<std::string>());
-            result.shape = TensorShape(json.at("shape").get<std::vector<std::size_t>>());
-
             std::array<std::size_t, 2> data_offsets{};
             json.at("data_offsets").get_to(data_offsets);
-            result.data_begin = data_offsets[0];
-            result.data_end = data_offsets[1];
-
-            return result;
+            return TensorDescriptor{
+                .data_begin = data_offsets[0],
+                .data_end = data_offsets[1],
+                .dtype = types::dtype_from_string(json.at("dtype").get<std::string>()),
+                .shape = TensorShape(json.at("shape").get<std::vector<std::size_t>>()),
+            };
         }
     };
 

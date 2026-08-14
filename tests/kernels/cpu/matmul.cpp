@@ -23,15 +23,15 @@ TEST_P(MatmulGemmTest, MatchesReference) {
     const auto a = test::random_bf16_vector(m * k);
     const auto b = test::random_bf16_vector(n * k);
 
-    std::vector<__bf16> reference_output(m * n);
-    std::vector<__bf16> actual_output(m * n);
+    std::vector<__bf16> expected_vec(m * n);
+    std::vector<__bf16> actual_vec(m * n);
 
-    cpu::kernels::reference::naive_matmul_bf16(a.data(), b.data(), reference_output.data(), m, n, k);
-    cpu::kernels::matmul_avx512bf16(a.data(), b.data(), actual_output.data(), m, n, k);
+    cpu::kernels::reference::naive_matmul_bf16(a.data(), b.data(), expected_vec.data(), m, n, k);
+    cpu::kernels::matmul_avx512bf16(a.data(), b.data(), actual_vec.data(), m, n, k);
 
-    for (const auto [reference, actual] : std::views::zip(reference_output, actual_output)) {
-        const auto tolerance = 0.01F + (0.01F * std::abs(static_cast<float>(actual)));
-        EXPECT_NEAR(static_cast<float>(reference), static_cast<float>(actual), tolerance);
+    for (const auto [expected, actual] : std::views::zip(expected_vec, actual_vec)) {
+        const auto tolerance = 0.01F + (0.01F * std::abs(static_cast<float>(expected)));
+        EXPECT_NEAR(expected, actual, tolerance);
     }
 }
 

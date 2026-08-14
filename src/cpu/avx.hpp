@@ -47,14 +47,6 @@ namespace inference::cpu::avx {
         return _mm512_reduce_add_ps(value);
     }
 
-    [[nodiscard]] [[gnu::always_inline]] inline float reduce_mul(const f32x16 value) noexcept {
-        return _mm512_reduce_mul_ps(value);
-    }
-
-    [[nodiscard]] [[gnu::always_inline]] inline float reduce_min(const f32x16 value) noexcept {
-        return _mm512_reduce_min_ps(value);
-    }
-
     [[nodiscard]] [[gnu::always_inline]] inline float reduce_max(const f32x16 value) noexcept {
         return _mm512_reduce_max_ps(value);
     }

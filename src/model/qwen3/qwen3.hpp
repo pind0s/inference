@@ -181,7 +181,7 @@ namespace inference::model::qwen3 {
             return scratch.logits;
         }
 
-        [[nodiscard]] Tensor prefill(const std::span<const std::size_t> token_ids, Context& context) {
+        [[nodiscard]] Tensor prefill(std::span<const std::uint32_t> token_ids, Context& context) {
             auto logits = forward(token_ids.front(), context);
             for (const auto token_id : token_ids | std::views::drop(1)) {
                 logits = forward(token_id, context);

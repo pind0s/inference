@@ -134,7 +134,7 @@ namespace inference {
             icu::UnicodeString normalized;
             normalizer->normalize(source, normalized, error);
 
-            if (error > U_ZERO_ERROR) {
+            if (U_FAILURE(error) != 0) {
                 throw std::runtime_error("Error normalizing text");
             }
 

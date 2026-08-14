@@ -6,7 +6,7 @@
 #include <vector>
 
 namespace inference {
-    using TokenId = std::size_t;
+    using TokenId = std::uint32_t;
     using TokenList = std::vector<TokenId>;
 
     struct MergePair {

@@ -1,5 +1,4 @@
 #pragma once
-#include <cstddef>
 
 namespace inference::cpu::kernels {
     inline void embedding(const std::size_t token_id, const __bf16* __restrict weights, __bf16* __restrict output, const std::size_t hidden_size) {

@@ -23,7 +23,7 @@ namespace inference {
             if (node.empty()) {
                 throw std::invalid_argument("No weights found for '" + name_with_prefix + "'");
             }
-            return node.mapped();
+            return std::move(node.mapped());
         }
 
         [[nodiscard]] Weights scope(const std::string_view name) const {

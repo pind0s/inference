@@ -1,24 +1,19 @@
 #pragma once
 #include "cpu/avx.hpp"
-
 #include <cmath>
 
 namespace inference::cpu::kernels {
-    inline void add(const __bf16* __restrict lhs, const __bf16* __restrict rhs, __bf16* out, const std::size_t N) {
-        const std::size_t vectorized = N - (N % 16);
+    inline void add(const __bf16* lhs, const __bf16* rhs, __bf16* output, const std::size_t num_elems) {
         constexpr std::size_t lanes = 16;
-
-        [[omp::directive(parallel loop)]] for (std::size_t index = 0; index < vectorized; index += lanes) {
-            const auto lhs_f32 = avx::load_bf16_as_f32(&lhs[index]);
-            const auto rhs_f32 = avx::load_bf16_as_f32(&rhs[index]);
-
-            const auto sum = lhs_f32 + rhs_f32;
-
-            avx::store_f32_as_bf16(&out[index], sum);
+        const std::size_t simd_end = num_elems - (num_elems % 16);
+        for (std::size_t i = 0; i < simd_end; i += lanes) {
+            const auto lhs_vec = avx::load_bf16_as_f32(&lhs[i]);
+            const auto rhs_vec = avx::load_bf16_as_f32(&rhs[i]);
+            avx::store_f32_as_bf16(&output[i], lhs_vec + rhs_vec);
         }
 
-        for (std::size_t index = vectorized; index < N; ++index) {
-            out[index] = static_cast<__bf16>(static_cast<float>(lhs[index]) + static_cast<float>(rhs[index]));
+        for (std::size_t i = simd_end; i < num_elems; ++i) {
+            output[i] = static_cast<__bf16>(static_cast<float>(lhs[i]) + static_cast<float>(rhs[i]));
         }
     }
 
@@ -37,6 +32,5 @@ namespace inference::cpu::kernels {
             }
         }
     } // namespace reference
-
 
 } // namespace inference::cpu::kernels
