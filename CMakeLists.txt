@@ -1,17 +1,26 @@
-cmake_minimum_required(VERSION 4.2)
-project(inference)
-set(CMAKE_CXX_STANDARD 26)
+cmake_minimum_required(VERSION 3.28)
+project(inference LANGUAGES CXX CUDA)
+
+set(CMAKE_CXX_STANDARD 23)
 
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED COMPONENTS regex container_hash)
+find_package(Boost CONFIG REQUIRED COMPONENTS regex)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
-find_package(argparse CONFIG REQUIRED)
 
-add_subdirectory(src/cpu)
+add_subdirectory(src/lib/backend/cpu)
+add_subdirectory(src/lib/backend/cuda)
 
-add_library(inference_lib STATIC src/tokenizer/tokenizer.cpp)
+add_library(inference_lib STATIC
+        src/lib/inference/generator.cpp
+        src/lib/tensor/tensor.cpp
+        src/lib/tokenizer/tokenizer.cpp)
 
-target_include_directories(inference_lib PUBLIC src)
+target_include_directories(inference_lib
+        PUBLIC
+        src/lib
+        PRIVATE
+        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+)
 
 target_link_libraries(inference_lib
         PUBLIC
@@ -20,18 +29,16 @@ target_link_libraries(inference_lib
         ICU::uc
         ICU::i18n
         PRIVATE
-        Boost::container_hash)
-
-
-add_executable(inference src/main.cpp)
-
-target_link_libraries(inference PRIVATE
-        inference_lib
         inference_cpu
-        argparse::argparse
+        inference_cuda
 )
 
+add_executable(inference src/entry/main.cpp)
+
+target_link_libraries(inference PRIVATE inference_lib)
+
+#option(INFERENCE_BUILD_BENCHMARKS "Build inference benchmarks" OFF)
 include(CTest)
-if(BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
+if (BUILD_TESTING)
+    add_subdirectory(testing)
+endif ()

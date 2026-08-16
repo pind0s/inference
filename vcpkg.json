@@ -3,18 +3,16 @@
   "version-string" : "1.0.0",
   "builtin-baseline" : "f87344cac03158cbf1467264565f1fd36b382a24",
   "dependencies" : [ {
+    "name": "benchmark"
+  },
+    {
     "name" : "gtest",
     "version>=" : "1.17.0#2"
-  }, {
-    "name" : "argparse",
-    "version>=" : "3.2"
   }, {
     "name" : "nlohmann-json",
     "version>=" : "3.12.0#2"
   }, {
     "name" : "boost-regex"
-  }, {
-    "name" : "boost-container-hash"
   }, {
     "name" : "icu"
   } ]

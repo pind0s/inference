@@ -20,7 +20,9 @@ Checks: "*,
         -misc-use-internal-linkage,
         -cppcoreguidelines-pro-bounds-pointer-arithmetic,
         -readability-math-missing-parentheses,
-        -hicpp-uppercase-literal-suffix,
+        -*-uppercase-literal-suffix,
+        -*-avoid-c-arrays,
+        -readability-identifier-length,
 "
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
