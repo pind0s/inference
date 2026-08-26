@@ -20,14 +20,13 @@ namespace {
 } // namespace
 
 int main(const int argc, char* argv[]) try {
-
     if (argc < 2) {
         throw std::invalid_argument("missing model path");
     }
 
-    std::println("Prompt: {}\n", prompt);
-
     auto generator = inference::Generator::load(argv[1], inference::types::Device::CPU, max_context_size);
+
+    std::println("Prompt: {}", prompt);
     const auto start = std::chrono::steady_clock::now();
     const auto completion = generator.generate(apply_chat_template(prompt));
     const auto elapsed = std::chrono::steady_clock::now() - start;

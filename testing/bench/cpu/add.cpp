@@ -9,8 +9,8 @@ namespace test {
 
         const auto element_count = static_cast<std::size_t>(state.range(0));
         const TensorShape shape(element_count);
-        const auto lhs = util::cpu::random_bf16_tensor(shape);
-        const auto rhs = util::cpu::random_bf16_tensor(shape);
+        const auto lhs = util::random_bf16_tensor(shape);
+        const auto rhs = util::random_bf16_tensor(shape);
         std::vector<cpu::bf16_t> output(element_count);
 
         for (auto _ : state) {

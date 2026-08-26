@@ -2,6 +2,7 @@
 #include <common/fake_qwen3.hpp>
 
 namespace test {
+    // todo make it test both cpu and cuda backends
     static void qwen3_decode(benchmark::State& state) {
         using namespace inference;
 

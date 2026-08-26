@@ -11,6 +11,8 @@
 #include <cublas_v2.h>
 #include <cuda/algorithm>
 #include <cuda/memory_resource>
+#include <cuda_runtime_api.h>
+#include <stdexcept>
 #include <thrust/device_ptr.h>
 #include <thrust/extrema.h>
 
@@ -37,6 +39,22 @@ namespace inference {
 
             void deallocate(void* pointer, std::size_t size_bytes) noexcept override {
                 memory_pool_.deallocate(stream_, pointer, size_bytes);
+            }
+
+            void copy(void* destination, const void* source, const std::size_t size_bytes, const types::Device source_device,
+                      const types::Device destination_device) override {
+                const auto kind = [source_device, destination_device] {
+                    if (source_device == types::Device::CPU) {
+                        return cudaMemcpyHostToDevice;
+                    }
+                    if (destination_device == types::Device::CPU) {
+                        return cudaMemcpyDeviceToHost;
+                    }
+                    return cudaMemcpyDeviceToDevice;
+                }();
+
+                check_cuda(cudaMemcpyAsync(destination, source, size_bytes, kind, stream_.get()));
+                stream_.sync();
             }
 
             void embedding(const types::TokenId token_id, const Tensor& weights, Tensor& output) override {
@@ -97,6 +115,12 @@ namespace inference {
             }
 
         private:
+            static void check_cuda(const cudaError_t error) {
+                if (error != cudaSuccess) {
+                    throw std::runtime_error(cudaGetErrorString(error));
+                }
+            }
+
             cuda::device_ref device_;
             cuda::stream stream_;
             cuda::device_memory_pool memory_pool_;

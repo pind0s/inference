@@ -3,7 +3,7 @@
 #include "tensor/tensor_view.hpp"
 #include <cmath>
 
-namespace test::reference::cpu {
+namespace test::reference {
     inline void rope(const inference::TensorView<inference::cpu::bf16_t> values, const float theta, const std::size_t pos) {
         const auto head_count = values.dim(0);
         const auto head_size = values.dim(1);
@@ -23,4 +23,4 @@ namespace test::reference::cpu {
             }
         }
     }
-} // namespace test::reference::cpu
+} // namespace test::reference

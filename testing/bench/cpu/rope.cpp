@@ -13,7 +13,7 @@ namespace test {
         const auto head_count = static_cast<std::size_t>(state.range(0));
         const auto head_size = static_cast<std::size_t>(state.range(1));
         const TensorShape shape(head_count, head_size);
-        auto values = util::cpu::random_bf16_tensor(shape);
+        auto values = util::random_bf16_tensor(shape);
         auto& backend = Backend::get_backend<types::Device::CPU>();
         auto rope_cache = make_rope_cache(position + 1, head_size, theta, backend);
 

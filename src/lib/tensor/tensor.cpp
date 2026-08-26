@@ -6,7 +6,6 @@
 #include "types/dtype.hpp"
 #include <cstddef>
 #include <cstring>
-#include <cuda_runtime_api.h>
 #include <memory>
 #include <span>
 #include <stdexcept>
@@ -32,18 +31,24 @@ namespace inference {
         return result;
     }
 
+    Tensor Tensor::copy_to_backend(Backend& backend) const {
+        auto result = empty(shape_, dtype_, backend);
+        if (size_bytes() == 0) {
+            return result;
+        }
+
+        auto& source_backend = storage_->backend;
+        auto& copy_backend = is_cuda() ? source_backend : backend;
+        copy_backend.copy(result.storage_->ptr, storage_->ptr, size_bytes(), source_backend.device(), backend.device());
+        return result;
+    }
+
     Tensor Tensor::host_to_device() const {
         if (!is_cpu()) {
             throw std::invalid_argument("host_to_device called on tensor that is not on host");
         }
 
-        auto& device_backend = Backend::get_backend<types::Device::CUDA>();
-        auto result = empty(shape_, dtype_, device_backend);
-        if (const auto error = cudaMemcpy(result.storage_->ptr, storage_->ptr, size_bytes(), cudaMemcpyHostToDevice); error != cudaSuccess) {
-            throw std::runtime_error(cudaGetErrorString(error));
-        }
-
-        return result;
+        return copy_to_backend(Backend::get_backend<types::Device::CUDA>());
     }
 
     Tensor Tensor::device_to_host() const {
@@ -51,12 +56,6 @@ namespace inference {
             throw std::invalid_argument("device_to_host called on tensor that is not on device");
         }
 
-        auto& host_backend = Backend::get_backend<types::Device::CPU>();
-        auto result = empty(shape_, dtype_, host_backend);
-        if (const auto error = cudaMemcpy(result.storage_->ptr, storage_->ptr, size_bytes(), cudaMemcpyDeviceToHost); error != cudaSuccess) {
-            throw std::runtime_error(cudaGetErrorString(error));
-        }
-
-        return result;
+        return copy_to_backend(Backend::get_backend<types::Device::CPU>());
     }
 } // namespace inference

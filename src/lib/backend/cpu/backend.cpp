@@ -9,6 +9,7 @@
 #include "backend/cpu/kernels/self_attention.hpp"
 #include "backend/rope_cache.hpp"
 #include "tensor/tensor.hpp"
+#include <cstring>
 
 namespace inference {
     namespace cpu {
@@ -25,6 +26,10 @@ namespace inference {
 
             void deallocate(void* pointer, std::size_t bytes) noexcept override {
                 operator delete(pointer, bytes, std::align_val_t{ alignment });
+            }
+
+            void copy(void* destination, const void* source, const std::size_t size_bytes, types::Device, types::Device) override {
+                std::memcpy(destination, source, size_bytes);
             }
 
             void embedding(const types::TokenId token_id, const Tensor& weights, Tensor& output) override {

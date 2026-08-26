@@ -37,7 +37,7 @@ add_executable(inference src/entry/main.cpp)
 
 target_link_libraries(inference PRIVATE inference_lib)
 
-#option(INFERENCE_BUILD_BENCHMARKS "Build inference benchmarks" OFF)
+option(INFERENCE_BUILD_BENCHMARKS "Build inference benchmarks" OFF)
 include(CTest)
 if (BUILD_TESTING)
     add_subdirectory(testing)

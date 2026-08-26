@@ -21,7 +21,7 @@ namespace test {
             const auto head_size = static_cast<std::size_t>(state.range(1));
 
             const auto rope_cache = make_rope_cache(position + 1, head_size, theta, backend);
-            auto values = util::cpu::random_bf16_tensor({ head_count, head_size }).host_to_device();
+            auto values = util::random_bf16_tensor({ head_count, head_size }).host_to_device();
 
             gpu::kernels::rope(stream, values.view<__nv_bfloat16>(), rope_cache.view(), position);
             stream.sync();

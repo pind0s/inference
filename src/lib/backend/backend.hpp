@@ -14,6 +14,8 @@ namespace inference {
         [[nodiscard]] virtual types::Device device() const = 0;
         [[nodiscard]] virtual void* allocate(std::size_t size_bytes) = 0;
         virtual void deallocate(void* pointer, std::size_t size_bytes) noexcept = 0;
+        virtual void copy(void* destination, const void* source, std::size_t size_bytes, types::Device source_device,
+                          types::Device destination_device) = 0;
 
         virtual void embedding(types::TokenId token_id, const Tensor& weights, Tensor& output) = 0;
         virtual void matmul(const Tensor& input, const Tensor& weights, Tensor& output) = 0;

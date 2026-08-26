@@ -28,9 +28,8 @@ namespace inference {
         const auto context_size = max_context_size.value_or(config.max_position_embeddings);
         auto weights = safetensors::load_weights_from_dir(model_path, backend);
         auto kv_cache = KVCache(config.num_hidden_layers, config.num_key_value_heads, config.head_dim, context_size, config.dtype, backend);
-
-        auto model = model::qwen3::Model::build(config, std::move(weights), context_size, backend);
         auto tokenizer = tokenizer::Tokenizer(model_path);
+        auto model = model::qwen3::Model::build(config, std::move(weights), context_size, backend);
         return Generator{ backend, std::move(model), std::move(tokenizer), std::move(kv_cache) };
     }
 

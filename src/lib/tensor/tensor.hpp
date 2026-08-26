@@ -13,6 +13,7 @@ namespace inference {
         [[nodiscard]] static Tensor empty(const TensorShape& shape, types::DType dtype, Backend& backend);
         [[nodiscard]] static Tensor from_host_bytes(std::span<const std::byte> source, const TensorShape& shape, types::DType dtype);
 
+        [[nodiscard]] Tensor copy_to_backend(Backend& backend) const;
         [[nodiscard]] Tensor host_to_device() const;
         [[nodiscard]] Tensor device_to_host() const;
 

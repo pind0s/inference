@@ -2,7 +2,7 @@
 #include "backend/cpu/bf16.hpp"
 #include "tensor/tensor_view.hpp"
 
-namespace test::reference::cpu {
+namespace test::reference {
     inline void matmul(inference::TensorView<const inference::cpu::bf16_t> lhs, inference::TensorView<const inference::cpu::bf16_t> rhs,
                        inference::TensorView<inference::cpu::bf16_t> output) {
         const auto row_count = lhs.dim(0);
@@ -19,4 +19,4 @@ namespace test::reference::cpu {
             }
         }
     }
-} // namespace test::reference::cpu
+} // namespace test::reference

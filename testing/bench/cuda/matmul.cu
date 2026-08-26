@@ -51,8 +51,8 @@
 //         const auto columns = static_cast<std::size_t>(state.range(1));
 //         const auto inner_size = static_cast<std::size_t>(state.range(2));
 //         const cuda::stream stream(cuda::devices[0]);
-//         const auto input = util::cpu::random_bf16_tensor({ rows, inner_size }).host_to_device();
-//         const auto weights = util::cpu::random_bf16_tensor({ columns, inner_size }).host_to_device();
+//         const auto input = util::random_bf16_tensor({ rows, inner_size }).host_to_device();
+//         const auto weights = util::random_bf16_tensor({ columns, inner_size }).host_to_device();
 //         auto& backend = Backend::get_backend<types::Device::CUDA>();
 //         auto output = Tensor::empty({ rows, columns }, types::DType::BF16, backend);
 //
@@ -70,8 +70,8 @@
 //         const auto inner_size = static_cast<std::size_t>(state.range(2));
 //
 //         const cuda::stream stream(cuda::devices[0]);
-//         const auto input = util::cpu::random_bf16_tensor({ rows, inner_size }).host_to_device();
-//         const auto weights = util::cpu::random_bf16_tensor({ columns, inner_size }).host_to_device();
+//         const auto input = util::random_bf16_tensor({ rows, inner_size }).host_to_device();
+//         const auto weights = util::random_bf16_tensor({ columns, inner_size }).host_to_device();
 //         auto& backend = Backend::get_backend<types::Device::CUDA>();
 //         auto output = Tensor::empty({ rows, columns }, types::DType::BF16, backend);
 //         cublasHandle_t handle{};

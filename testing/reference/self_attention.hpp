@@ -6,7 +6,7 @@
 #include <numeric>
 #include <vector>
 
-namespace test::reference::cpu {
+namespace test::reference {
     inline void self_attention(inference::TensorView<const inference::cpu::bf16_t> query, inference::TensorView<const inference::cpu::bf16_t> key,
                                inference::TensorView<const inference::cpu::bf16_t> value, inference::TensorView<inference::cpu::bf16_t> output,
                                const std::size_t position) {
@@ -47,4 +47,4 @@ namespace test::reference::cpu {
             }
         }
     }
-} // namespace test::reference::cpu
+} // namespace test::reference
