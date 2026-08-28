@@ -17,8 +17,9 @@ namespace inference {
             : capacity(capacity) {
             layers.reserve(layer_count);
             for (std::size_t index = 0; index < layer_count; ++index) {
-                layers.emplace_back(Tensor::empty({ capacity, num_heads, head_dim }, dtype, backend),
-                                    Tensor::empty({ capacity, num_heads, head_dim }, dtype, backend));
+                auto key = Tensor::empty({ capacity, num_heads, head_dim }, dtype, backend);
+                auto value = Tensor::empty({ capacity, num_heads, head_dim }, dtype, backend);
+                layers.emplace_back(std::move(key), std::move(value));
             }
         }
 

@@ -1,7 +1,8 @@
 #include "reference/matmul.hpp"
-#include "common/backend_test.hpp"
-#include "common/random.hpp"
-#include "common/tolerance.hpp"
+#include "util/backend_test.hpp"
+#include "util/random.hpp"
+#include "util/copy_tensor_to_host.hpp"
+#include "util/tolerance.hpp"
 #include "tensor/tensor.hpp"
 #include <array>
 #include <cmath>
@@ -32,14 +33,14 @@ namespace test {
             auto expected = Tensor::empty({ rows, columns }, types::DType::BF16, cpu_backend);
             reference::matmul(host_input.view<cpu::bf16_t>(), host_weights.view<cpu::bf16_t>(), expected.view<cpu::bf16_t>());
 
-            const auto input = host_input.copy_to_backend(target_backend);
-            const auto weights = host_weights.copy_to_backend(target_backend);
+            const auto input = target_backend.make_tensor(host_input.bytes(), host_input.shape(), host_input.dtype());
+            const auto weights = target_backend.make_tensor(host_weights.bytes(), host_weights.shape(), host_weights.dtype());
             auto output = Tensor::empty({ rows, columns }, types::DType::BF16, target_backend);
             target_backend.matmul(input, weights, output);
 
-            const auto actual = output.copy_to_backend(cpu_backend);
+            const auto actual = util::copy_tensor_to_host<cpu::bf16_t>(output);
             const auto absolute_tolerance = 0.01F * std::sqrt(static_cast<float>(inner_size));
-            for (const auto [expected_value, actual_value] : std::views::zip(expected.view<cpu::bf16_t>(), actual.view<cpu::bf16_t>())) {
+            for (const auto [expected_value, actual_value] : std::views::zip(expected.view<cpu::bf16_t>(), actual)) {
                 ASSERT_NEAR(expected_value, actual_value, util::tolerance_for(expected_value, absolute_tolerance));
             }
         }

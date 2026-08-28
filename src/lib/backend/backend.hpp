@@ -1,9 +1,13 @@
 #pragma once
 #include "types/device.hpp"
+#include "types/dtype.hpp"
 #include "types/token.hpp"
 #include <cstddef>
+#include <span>
+#include <stdexcept>
 
 namespace inference {
+    class TensorShape;
     struct RopeCache;
     class Tensor;
 
@@ -14,8 +18,8 @@ namespace inference {
         [[nodiscard]] virtual types::Device device() const = 0;
         [[nodiscard]] virtual void* allocate(std::size_t size_bytes) = 0;
         virtual void deallocate(void* pointer, std::size_t size_bytes) noexcept = 0;
-        virtual void copy(void* destination, const void* source, std::size_t size_bytes, types::Device source_device,
-                          types::Device destination_device) = 0;
+
+        [[nodiscard]] virtual Tensor make_tensor(std::span<const std::byte> source, const TensorShape& shape, types::DType dtype) = 0;
 
         virtual void embedding(types::TokenId token_id, const Tensor& weights, Tensor& output) = 0;
         virtual void matmul(const Tensor& input, const Tensor& weights, Tensor& output) = 0;
@@ -29,6 +33,8 @@ namespace inference {
 
         template <types::Device D>
         static Backend& get_backend();
+
+        static Backend& select_backend(types::Device device);
     };
 
     template <>
@@ -36,5 +42,15 @@ namespace inference {
 
     template <>
     Backend& Backend::get_backend<types::Device::CUDA>();
+
+    inline Backend& Backend::select_backend(const types::Device device) {
+        switch (device) {
+        case types::Device::CPU:
+            return get_backend<types::Device::CPU>();
+        case types::Device::CUDA:
+            return get_backend<types::Device::CUDA>();
+        }
+        throw std::invalid_argument("backend::select_backend: unknown device");
+    }
 
 } // namespace inference

@@ -1,14 +1,8 @@
 find_package(CUDAToolkit 13.3 REQUIRED)
 
-add_library(inference_cuda STATIC
-        backend.cu
-        kernels/matmul.cuh
-)
+add_library(inference_cuda STATIC backend.cu)
 
-target_include_directories(inference_cuda
-        PUBLIC
-        ../..
-)
+target_include_directories(inference_cuda PUBLIC ../..)
 
 target_link_libraries(inference_cuda
         PUBLIC

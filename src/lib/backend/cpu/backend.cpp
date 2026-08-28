@@ -1,5 +1,5 @@
 #include "backend/backend.hpp"
-#include "backend/cpu/kernels/elementwise.hpp"
+#include "backend/cpu/kernels/add.hpp"
 #include "backend/cpu/kernels/embedding.hpp"
 #include "backend/cpu/kernels/kv_cache.hpp"
 #include "backend/cpu/kernels/matmul.hpp"
@@ -7,9 +7,11 @@
 #include "backend/cpu/kernels/rope.hpp"
 #include "backend/cpu/kernels/sampling.hpp"
 #include "backend/cpu/kernels/self_attention.hpp"
-#include "backend/rope_cache.hpp"
+#include "backend/cpu/kernels/silu.hpp"
+#include "backend/util/rope_cache.hpp"
 #include "tensor/tensor.hpp"
 #include <cstring>
+#include <stdexcept>
 
 namespace inference {
     namespace cpu {
@@ -24,12 +26,20 @@ namespace inference {
                 return operator new(size_bytes, std::align_val_t{ alignment });
             }
 
-            void deallocate(void* pointer, std::size_t bytes) noexcept override {
-                operator delete(pointer, bytes, std::align_val_t{ alignment });
+            [[nodiscard]] Tensor make_tensor(const std::span<const std::byte> source, const TensorShape& shape, const types::DType dtype) override {
+                if (source.size_bytes() != shape.size() * types::dtype_byte_size(dtype)) {
+                    throw std::invalid_argument("cpu::backend: tensor shape and dtype do not match the supplied data size");
+                }
+
+                auto tensor = Tensor::empty(shape, dtype, *this);
+                if (!source.empty()) {
+                    std::memcpy(tensor.bytes().data(), source.data(), source.size_bytes());
+                }
+                return tensor;
             }
 
-            void copy(void* destination, const void* source, const std::size_t size_bytes, types::Device, types::Device) override {
-                std::memcpy(destination, source, size_bytes);
+            void deallocate(void* pointer, std::size_t bytes) noexcept override {
+                operator delete(pointer, bytes, std::align_val_t{ alignment });
             }
 
             void embedding(const types::TokenId token_id, const Tensor& weights, Tensor& output) override {

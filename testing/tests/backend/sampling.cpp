@@ -1,5 +1,5 @@
-#include "common/backend_test.hpp"
-#include "common/random.hpp"
+#include "util/backend_test.hpp"
+#include "util/random.hpp"
 #include <algorithm>
 #include <array>
 
@@ -16,7 +16,7 @@ namespace test {
             const auto host_logits = util::random_bf16_tensor({ element_count });
             const auto logits_values = host_logits.view<cpu::bf16_t>();
             const auto expected = std::max_element(logits_values.data(), logits_values.data() + element_count) - logits_values.data();
-            const auto logits = host_logits.copy_to_backend(target_backend);
+            const auto logits = target_backend.make_tensor(host_logits.bytes(), host_logits.shape(), host_logits.dtype());
 
             EXPECT_EQ(expected, target_backend.argmax(logits));
         }

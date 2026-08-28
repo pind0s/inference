@@ -28,18 +28,17 @@ namespace inference::safetensors {
     };
 
     // todo add support for models that are sharded into multiple files
-    // todo add support for manual mapped files
-    [[nodiscard]] inline Weights load_weights_from_dir(const std::filesystem::path& path, const Backend& backend) {
+    [[nodiscard]] inline Weights load_weights(const std::filesystem::path& path, Backend& backend) {
+        constexpr std::string_view model_file_name = "model.safetensors";
         Weights weights;
-        constexpr std::string_view model_path = "model.safetensors";
-        const auto file = util::read_file(path / model_path);
-        const auto file_bytes = std::span{ file };
+        const auto file = util::read_file(path / model_file_name);
+        const auto file_span = std::span{ file };
 
         std::uint64_t header_size{};
-        std::memcpy(&header_size, file_bytes.data(), sizeof header_size);
+        std::memcpy(&header_size, file_span.data(), sizeof header_size);
 
-        const auto header_bytes = file_bytes.subspan(sizeof header_size).first(header_size);
-        const auto weight_bytes = file_bytes.subspan(sizeof header_size + header_size);
+        const auto header_bytes = file_span.subspan(sizeof header_size).first(header_size);
+        const auto weight_bytes = file_span.subspan(sizeof header_size + header_size);
 
         for (const auto& [key, value] : nlohmann::json::parse(header_bytes).items()) {
             if (key == "__metadata__") {
@@ -48,12 +47,7 @@ namespace inference::safetensors {
 
             const auto [data_begin, data_end, dtype, shape] = TensorDescriptor::from_json(value);
             const auto source = weight_bytes.subspan(data_begin, data_end - data_begin);
-            auto tensor = Tensor::from_host_bytes(source, shape, dtype);
-            if (backend.device() == types::Device::CUDA) {
-                weights.insert(key, tensor.host_to_device());
-            } else {
-                weights.insert(key, std::move(tensor));
-            }
+            weights.insert(key, backend.make_tensor(source, shape, dtype));
         }
 
         return weights;

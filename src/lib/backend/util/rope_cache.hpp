@@ -21,17 +21,11 @@ namespace inference {
     };
 
     [[nodiscard]] inline RopeCache make_rope_cache(std::size_t max_position, std::size_t head_size, float theta, Backend& backend) {
-        auto& cpu_backend = backend.device() == types::Device::CPU ? backend : Backend::get_backend<types::Device::CPU>();
         const auto half_size = head_size / 2;
-        const TensorShape shape{ max_position, half_size };
+        std::vector<float> cos(max_position * half_size);
+        std::vector<float> sin(max_position * half_size);
+        std::vector<float> inverse_frequencies(half_size);
 
-        auto cos_tensor = Tensor::empty(shape, types::DType::F32, cpu_backend);
-        auto sin_tensor = Tensor::empty(shape, types::DType::F32, cpu_backend);
-
-        auto cos_view = cos_tensor.view<float>();
-        auto sin_view = sin_tensor.view<float>();
-
-        auto inverse_frequencies = std::vector<float>(half_size);
         for (std::size_t index = 0; index < half_size; ++index) {
             const auto exponent = 2.0F * static_cast<float>(index) / static_cast<float>(head_size);
             inverse_frequencies[index] = 1.0F / std::pow(theta, exponent);
@@ -40,16 +34,13 @@ namespace inference {
         for (std::size_t position = 0; position < max_position; ++position) {
             for (std::size_t index = 0; index < half_size; ++index) {
                 const auto angle = static_cast<float>(position) * inverse_frequencies[index];
-                cos_view(position, index) = std::cos(angle);
-                sin_view(position, index) = std::sin(angle);
+                cos[position * half_size + index] = std::cos(angle);
+                sin[position * half_size + index] = std::sin(angle);
             }
         }
 
-        if (backend.device() == types::Device::CUDA) {
-            cos_tensor = cos_tensor.host_to_device();
-            sin_tensor = sin_tensor.host_to_device();
-        }
-
+        auto cos_tensor = backend.make_tensor(std::as_bytes(std::span{ cos }), { max_position, half_size }, types::DType::F32);
+        auto sin_tensor = backend.make_tensor(std::as_bytes(std::span{ sin }), { max_position, half_size }, types::DType::F32);
         return { .cosine = std::move(cos_tensor), .sine = std::move(sin_tensor) };
     }
 } // namespace inference

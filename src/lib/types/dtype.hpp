@@ -25,7 +25,7 @@ namespace inference::types {
             return 8;
         }
 
-        throw std::invalid_argument("Unknown size for safetensors dtype");
+        throw std::invalid_argument("unknown dtype byte size");
     }
 
     [[nodiscard]] inline DType dtype_from_string(std::string_view str) {
@@ -49,6 +49,6 @@ namespace inference::types {
             return DType::F32;
         }
 
-        throw std::invalid_argument("Unsupported safetensors dtype: " + std::string(str));
+        throw std::invalid_argument("unknown dtype: " + std::string(str));
     }
 } // namespace inference::types

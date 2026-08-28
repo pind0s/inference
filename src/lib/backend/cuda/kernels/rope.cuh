@@ -1,6 +1,6 @@
 #pragma once
+#include "../../util/rope_cache.hpp"
 #include "backend/cuda/kernels/util.cuh"
-#include "backend/rope_cache.hpp"
 #include "tensor/tensor_view.hpp"
 #include <cuda/cmath>
 #include <cuda/launch>

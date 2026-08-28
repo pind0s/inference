@@ -183,7 +183,6 @@ namespace inference::tokenizer {
         std::array<std::string, BYTE_VOCAB_SIZE> table;
 
         UChar32 next_remapped = U'\u0100';
-        // TODO(pind0s): std::ranges::views::indices c++26 only :(
         for (const auto byte : std::views::iota(0uz, table.size())) {
             const bool unchanged = (byte >= 0x21 && byte <= 0x7E) || (byte >= 0xA1 && byte <= 0xAC) || (byte >= 0xAE && byte <= 0xFF);
 

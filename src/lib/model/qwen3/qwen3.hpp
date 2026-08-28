@@ -1,11 +1,14 @@
 #pragma once
-#include "backend/rope_cache.hpp"
+#include "backend/util/rope_cache.hpp"
 #include "config.hpp"
 #include "kv_cache/kv_cache.hpp"
 #include "model/weights.hpp"
 #include "tensor/tensor.hpp"
+#include <format>
 #include <ranges>
 #include <span>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -85,6 +88,7 @@ namespace inference::model::qwen3 {
               logits(Tensor::empty({ config.vocab_size }, config.dtype, backend)) { }
     };
 
+    // todo this probably should be move only?
     struct Model {
         Config config;
         Tensor embed_tokens;
@@ -93,6 +97,14 @@ namespace inference::model::qwen3 {
         std::vector<Layer> layers;
         RopeCache rope_cache;
         ScratchSpace scratch;
+
+        [[nodiscard]] static std::string apply_chat_template(const std::string_view prompt) {
+            return std::format("<|im_start|>user\n{}<|im_end|>\n"
+                               "<|im_start|>assistant\n"
+                               "<think>\n\n"
+                               "</think>",
+                               prompt);
+        }
 
         [[nodiscard]] static Model build(const Config& config, Weights weights, const std::size_t context_size, Backend& backend) {
             auto model_weights = weights.scope("model");

@@ -16,8 +16,8 @@ namespace inference::cpu::kernels {
         const auto tile_count = tile_rows * tile_columns;
 
         [[omp::directive(parallel loop)]] for (std::size_t tile_index = 0; tile_index < tile_count; ++tile_index) {
-            const auto x = (tile_index / tile_columns) * 4;
-            const auto y = (tile_index % tile_columns) * 4;
+            const auto x = tile_index / tile_columns * 4;
+            const auto y = tile_index % tile_columns * 4;
             const auto rows_in_tile = std::min(4UZ, rows - x);
             const auto columns_in_tile = std::min(4UZ, columns - y);
             avx::f32x16 accum[4][4];

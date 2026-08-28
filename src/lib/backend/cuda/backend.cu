@@ -1,11 +1,12 @@
+#include "../util/rope_cache.hpp"
 #include "backend/backend.hpp"
-#include "backend/cuda/kernels/elementwise.cuh"
+#include "backend/cuda/kernels/add.cuh"
 #include "backend/cuda/kernels/embedding.cuh"
 #include "backend/cuda/kernels/flash_attention.cuh"
 #include "backend/cuda/kernels/matmul.cuh"
 #include "backend/cuda/kernels/rmsnorm.cuh"
 #include "backend/cuda/kernels/rope.cuh"
-#include "backend/rope_cache.hpp"
+#include "backend/cuda/kernels/silu.cuh"
 #include "tensor/tensor.hpp"
 #include "types/device.hpp"
 #include <cublas_v2.h>
@@ -33,28 +34,25 @@ namespace inference {
                 return types::Device::CUDA;
             }
 
+            [[nodiscard]] Tensor make_tensor(const std::span<const std::byte> source, const TensorShape& shape, const types::DType dtype) override {
+                if (source.size_bytes() != shape.size() * types::dtype_byte_size(dtype)) {
+                    throw std::invalid_argument("cuda::backend: tensor shape and dtype do not match the supplied data size");
+                }
+
+                auto tensor = Tensor::empty(shape, dtype, *this);
+                if (!source.empty()) {
+                    check_cuda(cudaMemcpyAsync(tensor.bytes().data(), source.data(), source.size_bytes(), cudaMemcpyHostToDevice, stream_.get()));
+                    stream_.sync();
+                }
+                return tensor;
+            }
+
             [[nodiscard]] void* allocate(std::size_t size_bytes) override {
                 return memory_pool_.allocate(stream_, size_bytes);
             }
 
             void deallocate(void* pointer, std::size_t size_bytes) noexcept override {
                 memory_pool_.deallocate(stream_, pointer, size_bytes);
-            }
-
-            void copy(void* destination, const void* source, const std::size_t size_bytes, const types::Device source_device,
-                      const types::Device destination_device) override {
-                const auto kind = [source_device, destination_device] {
-                    if (source_device == types::Device::CPU) {
-                        return cudaMemcpyHostToDevice;
-                    }
-                    if (destination_device == types::Device::CPU) {
-                        return cudaMemcpyDeviceToHost;
-                    }
-                    return cudaMemcpyDeviceToDevice;
-                }();
-
-                check_cuda(cudaMemcpyAsync(destination, source, size_bytes, kind, stream_.get()));
-                stream_.sync();
             }
 
             void embedding(const types::TokenId token_id, const Tensor& weights, Tensor& output) override {
@@ -80,15 +78,17 @@ namespace inference {
             void kv_cache_update(const Tensor& key, const Tensor& value, Tensor& cached_key, Tensor& cached_value,
                                  const std::size_t token_offset) override {
                 assert(key.dtype() == types::DType::BF16);
-                const auto offset_bytes = token_offset * key.size_bytes();
-                const auto key_bytes = key.view<std::byte>();
-                const auto value_bytes = value.view<std::byte>();
-                const auto cached_key_bytes = cached_key.view<std::byte>();
-                const auto cached_value_bytes = cached_value.view<std::byte>();
-                cuda::copy_bytes(stream_, cuda::std::span{ key_bytes.data(), key.size_bytes() },
-                                 cuda::std::span{ cached_key_bytes.data() + offset_bytes, key.size_bytes() });
-                cuda::copy_bytes(stream_, cuda::std::span{ value_bytes.data(), value.size_bytes() },
-                                 cuda::std::span{ cached_value_bytes.data() + offset_bytes, value.size_bytes() });
+
+                const auto key_offset_bytes = token_offset * key.size_bytes();
+                const auto value_offset_bytes = token_offset * value.size_bytes();
+
+                const auto key_source = cuda::std::span{ key.bytes().data(), key.size_bytes() };
+                const auto value_source = cuda::std::span{ value.bytes().data(), value.size_bytes() };
+                const auto key_destination = cuda::std::span{ cached_key.bytes().data() + key_offset_bytes, key.size_bytes() };
+                const auto value_destination = cuda::std::span{ cached_value.bytes().data() + value_offset_bytes, value.size_bytes() };
+
+                cuda::copy_bytes(stream_, key_source, key_destination);
+                cuda::copy_bytes(stream_, value_source, value_destination);
             }
 
             void self_attention(const Tensor& query, const Tensor& key, const Tensor& value, Tensor& output, const std::size_t position) override {

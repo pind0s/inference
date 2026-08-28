@@ -1,7 +1,8 @@
 #include "reference/self_attention.hpp"
-#include "common/backend_test.hpp"
-#include "common/random.hpp"
-#include "common/tolerance.hpp"
+#include "util/backend_test.hpp"
+#include "util/random.hpp"
+#include "util/copy_tensor_to_host.hpp"
+#include "util/tolerance.hpp"
 #include "tensor/tensor.hpp"
 #include <array>
 #include <ranges>
@@ -39,14 +40,14 @@ namespace test {
             reference::self_attention(host_query.view<cpu::bf16_t>(), host_key.view<cpu::bf16_t>(), host_value.view<cpu::bf16_t>(),
                                       expected.view<cpu::bf16_t>(), position);
 
-            const auto query = host_query.copy_to_backend(target_backend);
-            const auto key = host_key.copy_to_backend(target_backend);
-            const auto value = host_value.copy_to_backend(target_backend);
+            const auto query = target_backend.make_tensor(host_query.bytes(), host_query.shape(), host_query.dtype());
+            const auto key = target_backend.make_tensor(host_key.bytes(), host_key.shape(), host_key.dtype());
+            const auto value = target_backend.make_tensor(host_value.bytes(), host_value.shape(), host_value.dtype());
             auto output = Tensor::empty(query_shape, types::DType::BF16, target_backend);
             target_backend.self_attention(query, key, value, output, position);
 
-            const auto actual = output.copy_to_backend(cpu_backend);
-            for (const auto [expected_value, actual_value] : std::views::zip(expected.view<cpu::bf16_t>(), actual.view<cpu::bf16_t>())) {
+            const auto actual = util::copy_tensor_to_host<cpu::bf16_t>(output);
+            for (const auto [expected_value, actual_value] : std::views::zip(expected.view<cpu::bf16_t>(), actual)) {
                 ASSERT_NEAR(expected_value, actual_value, util::tolerance_for(expected_value));
             }
         }

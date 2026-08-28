@@ -1,6 +1,6 @@
 #pragma once
 #include "backend/cpu/bf16.hpp"
-#include "backend/rope_cache.hpp"
+#include "backend/util/rope_cache.hpp"
 #include "tensor/tensor_view.hpp"
 
 namespace inference::cpu::kernels {

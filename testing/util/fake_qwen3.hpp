@@ -46,11 +46,7 @@ namespace test::util {
             auto values = std::vector<cpu::bf16_t>(shape.size());
             std::ranges::generate(values, [&] { return distribution(random); });
 
-            auto tensor = Tensor::from_host_bytes(std::as_bytes(std::span{ values }), shape, types::DType::BF16);
-            if (backend.device() == types::Device::CUDA) {
-                tensor = tensor.host_to_device();
-            }
-            return tensor;
+            return backend.make_tensor(std::as_bytes(std::span{ values }), shape, types::DType::BF16);
         };
 
         auto layers = std::vector<model::qwen3::Layer>{};

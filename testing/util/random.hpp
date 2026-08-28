@@ -1,4 +1,5 @@
 #pragma once
+#include "backend/backend.hpp"
 #include "backend/cpu/bf16.hpp"
 #include "tensor/tensor.hpp"
 #include <algorithm>
@@ -18,7 +19,8 @@ namespace test::util {
             std::uniform_real_distribution distribution(min, max);
             std::vector<inference::cpu::bf16_t> values(shape.size());
             std::ranges::generate(values, [&] { return distribution(engine); });
-            return inference::Tensor::from_host_bytes(std::as_bytes(std::span{ values }), shape, inference::types::DType::BF16);
+            auto& backend = inference::Backend::get_backend<inference::types::Device::CPU>();
+            return backend.make_tensor(std::as_bytes(std::span{ values }), shape, inference::types::DType::BF16);
         }
     } // namespace detail
 
@@ -32,4 +34,5 @@ namespace test::util {
         std::mt19937 engine{ seed.value };
         return detail::random_bf16_tensor(shape, engine, min, max);
     }
+
 } // namespace test::util

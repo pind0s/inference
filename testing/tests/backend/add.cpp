@@ -1,6 +1,7 @@
-#include "common/backend_test.hpp"
-#include "common/random.hpp"
-#include "common/tolerance.hpp"
+#include "util/backend_test.hpp"
+#include "util/random.hpp"
+#include "util/copy_tensor_to_host.hpp"
+#include "util/tolerance.hpp"
 #include "tensor/tensor.hpp"
 #include <array>
 #include <ranges>
@@ -29,13 +30,13 @@ namespace test {
                 expected_values[index] = lhs_values[index].to_float() + rhs_values[index].to_float();
             }
 
-            const auto lhs = host_lhs.copy_to_backend(target_backend);
-            const auto rhs = host_rhs.copy_to_backend(target_backend);
+            const auto lhs = target_backend.make_tensor(host_lhs.bytes(), shape, types::DType::BF16);
+            const auto rhs = target_backend.make_tensor(host_rhs.bytes(), shape, types::DType::BF16);
             auto output = Tensor::empty(shape, types::DType::BF16, target_backend);
             target_backend.add(lhs, rhs, output);
 
-            const auto actual = output.copy_to_backend(cpu_backend);
-            for (const auto [expected_value, actual_value] : std::views::zip(expected.view<cpu::bf16_t>(), actual.view<cpu::bf16_t>())) {
+            const auto actual = util::copy_tensor_to_host<cpu::bf16_t>(output);
+            for (const auto [expected_value, actual_value] : std::views::zip(expected.view<cpu::bf16_t>(), actual)) {
                 ASSERT_NEAR(expected_value, actual_value, util::tolerance_for(expected_value));
             }
         }

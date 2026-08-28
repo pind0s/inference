@@ -1,8 +1,6 @@
 #pragma once
 #include "util/host_device.hpp"
 #include <algorithm>
-#include <array>
-#include <concepts>
 #include <initializer_list>
 #include <iostream>
 #include <span>
@@ -13,12 +11,6 @@ namespace inference {
     class TensorShape {
     public:
         static constexpr std::size_t max_rank = 4;
-
-        // todo probably just delete this.
-        template <std::integral... Dimensions>
-            requires(sizeof...(Dimensions) > 0 && sizeof...(Dimensions) <= max_rank)
-        explicit constexpr TensorShape(Dimensions... dimensions)
-            : TensorShape{ std::array<std::size_t, sizeof...(Dimensions)>{ static_cast<std::size_t>(dimensions)... } } { }
 
         constexpr TensorShape(std::initializer_list<std::size_t> dimensions): TensorShape{ std::span(dimensions) } { }
 
@@ -56,27 +48,19 @@ namespace inference {
             return num_elems_;
         }
 
-        // i would love to use custom formatter here with std::println, but nvcc doesn't support c++23 features with MSVC
-        void print() const {
-            std::cout << "shape: [";
+        [[nodiscard]] std::string to_string() const {
+            std::string result;
+            result += "shape: [";
+
             for (std::size_t i = 0; i < rank_; i++) {
-                std::cout << shape_[i];
+                result += std::to_string(shape_[i]);
                 if (i < rank_ - 1) {
-                    std::cout << ", ";
+                    result += ", ";
                 }
             }
-            std::cout << "] ";
-
-            std::cout << "stride: [";
-            for (std::size_t i = 0; i < rank_; i++) {
-                std::cout << stride_[i];
-                if (i < rank_ - 1) {
-                    std::cout << ", ";
-                }
-            }
-            std::cout << "] ";
-
-            std::cout << "num_elems: " << num_elems_ << "\n";
+            result += "]\n";
+            result += "num elems: " + std::to_string(num_elems_);
+            return result;
         }
 
     private:

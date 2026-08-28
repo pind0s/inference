@@ -11,11 +11,6 @@ namespace inference {
     class Tensor {
     public:
         [[nodiscard]] static Tensor empty(const TensorShape& shape, types::DType dtype, Backend& backend);
-        [[nodiscard]] static Tensor from_host_bytes(std::span<const std::byte> source, const TensorShape& shape, types::DType dtype);
-
-        [[nodiscard]] Tensor copy_to_backend(Backend& backend) const;
-        [[nodiscard]] Tensor host_to_device() const;
-        [[nodiscard]] Tensor device_to_host() const;
 
         [[nodiscard]] TensorShape shape() const {
             return shape_;
@@ -63,6 +58,14 @@ namespace inference {
 
         [[nodiscard]] bool is_cpu() const {
             return device() == types::Device::CPU;
+        }
+
+        [[nodiscard]] std::span<std::byte> bytes() {
+            return { static_cast<std::byte*>(storage_->ptr), storage_->size_bytes() };
+        }
+
+        [[nodiscard]] std::span<const std::byte> bytes() const {
+            return { static_cast<const std::byte*>(storage_->ptr), storage_->size_bytes() };
         }
 
     private:

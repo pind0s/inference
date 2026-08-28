@@ -6,7 +6,6 @@
 #include <filesystem>
 #include <optional>
 #include <string>
-#include <string_view>
 
 namespace inference {
     class Generator : public util::MoveOnly {
@@ -14,12 +13,12 @@ namespace inference {
         [[nodiscard]] static Generator load(const std::filesystem::path& model_path, types::Device device,
                                             std::optional<std::size_t> max_context_size = std::nullopt);
 
-        [[nodiscard]] std::string generate(std::string_view prompt);
+        [[nodiscard]] std::string generate(std::string prompt);
 
     private:
         Generator(Backend& backend, model::qwen3::Model model, tokenizer::Tokenizer tokenizer, KVCache kv_cache);
 
-        [[nodiscard]] static model::qwen3::Config get_model_config(const std::filesystem::path& model_path);
+        [[nodiscard]] static model::qwen3::Config load_config(const std::filesystem::path& model_path);
 
         Backend& backend_;
         model::qwen3::Model model_;

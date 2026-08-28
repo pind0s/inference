@@ -21,7 +21,6 @@ namespace inference::gpu::kernels {
         };
     } // namespace detail
 
-    // todo this should just be a cuda::copy_bytes or something?
     inline void embedding(const cuda::stream_ref stream, const TensorView<const __nv_bfloat16> weights, const TensorView<__nv_bfloat16> output,
                           const types::TokenId token_id) {
         const auto hidden_size = output.size();
