@@ -1,9 +1,9 @@
 #include "reference/self_attention.hpp"
-#include "util/backend_test.hpp"
-#include "util/random.hpp"
-#include "util/copy_tensor_to_host.hpp"
-#include "util/tolerance.hpp"
 #include "tensor/tensor.hpp"
+#include "util/backend_test.hpp"
+#include "util/copy_tensor_to_host.hpp"
+#include "util/random.hpp"
+#include "util/tolerance.hpp"
 #include <array>
 #include <ranges>
 
