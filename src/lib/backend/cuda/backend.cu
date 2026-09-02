@@ -1,12 +1,13 @@
-#include "../util/rope_cache.hpp"
 #include "backend/backend.hpp"
 #include "backend/cuda/kernels/add.cuh"
 #include "backend/cuda/kernels/embedding.cuh"
 #include "backend/cuda/kernels/flash_attention.cuh"
 #include "backend/cuda/kernels/matmul.cuh"
+#include "backend/cuda/kernels/qk_norm_rope.cuh"
 #include "backend/cuda/kernels/rmsnorm.cuh"
 #include "backend/cuda/kernels/rope.cuh"
 #include "backend/cuda/kernels/silu.cuh"
+#include "backend/util/rope_cache.hpp"
 #include "tensor/tensor.hpp"
 #include "types/device.hpp"
 #include <cublas_v2.h>
@@ -65,7 +66,7 @@ namespace inference {
                 kernels::matmul_cublas_bf16(cublas_handle_, input.view<__nv_bfloat16>(), weights.view<__nv_bfloat16>(), output.view<__nv_bfloat16>());
             }
 
-            void rmsnorm(const Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) override {
+            void rmsnorm(Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) override {
                 assert(output.dtype() == types::DType::BF16);
                 kernels::rmsnorm(stream_, input.view<__nv_bfloat16>(), weight.view<__nv_bfloat16>(), output.view<__nv_bfloat16>(), epsilon);
             }
@@ -112,6 +113,15 @@ namespace inference {
                 const auto first = thrust::device_pointer_cast(logits.view<__nv_bfloat16>().data());
                 const auto maximum = thrust::max_element(thrust::cuda::par.on(stream_.get()), first, first + logits.size());
                 return static_cast<types::TokenId>(maximum - first);
+            }
+
+            void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const RopeCache& cache, std::size_t token_pos,
+                              float eps) override {
+                assert(query.dtype() == types::DType::BF16);
+                assert(query.shape().dim(1) == 128);
+
+                kernels::qk_norm_rope(stream_, query.view<__nv_bfloat16>(), key.view<__nv_bfloat16>(), q_norm.view<__nv_bfloat16>(),
+                                      k_norm.view<__nv_bfloat16>(), cache.view(), token_pos, eps);
             }
 
         private:

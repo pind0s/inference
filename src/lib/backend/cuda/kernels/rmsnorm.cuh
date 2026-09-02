@@ -14,7 +14,7 @@ namespace inference::gpu::kernels {
             using BlockReduce = cub::BlockReduce<float, util::threads_per_block>;
 
             template <typename Configuration>
-            __device__ void operator()(const Configuration& config, TensorView<const __nv_bfloat16> input, TensorView<const __nv_bfloat16> weight,
+            __device__ void operator()(const Configuration& config, TensorView<__nv_bfloat16> input, TensorView<const __nv_bfloat16> weight,
                                        TensorView<__nv_bfloat16> output, float epsilon) {
 
                 auto smem = cuda::dynamic_shared_memory(config);
@@ -49,7 +49,7 @@ namespace inference::gpu::kernels {
         };
     } // namespace detail
 
-    inline void rmsnorm(const cuda::stream_ref stream, const TensorView<const __nv_bfloat16> input, const TensorView<const __nv_bfloat16> weight,
+    inline void rmsnorm(const cuda::stream_ref stream, const TensorView<__nv_bfloat16> input, const TensorView<const __nv_bfloat16> weight,
                         const TensorView<__nv_bfloat16> output, float epsilon) {
         const auto row_size = weight.size();
         const auto row_count = input.size() / row_size;

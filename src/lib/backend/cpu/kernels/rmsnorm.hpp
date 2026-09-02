@@ -3,7 +3,7 @@
 #include "tensor/tensor_view.hpp"
 #include <cmath>
 namespace inference::cpu::kernels {
-    inline void rmsnorm(TensorView<const bf16_t> input, TensorView<const bf16_t> weight, TensorView<bf16_t> output, float epsilon) {
+    inline void rmsnorm(TensorView<bf16_t> input, TensorView<const bf16_t> weight, TensorView<bf16_t> output, float epsilon) {
         const auto element_count = input.size();
         const auto row_size = weight.size();
 

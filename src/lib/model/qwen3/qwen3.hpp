@@ -144,19 +144,17 @@ namespace inference::model::qwen3 {
                 backend.matmul(scratch.hidden_scratch, layer.self_attn.k_proj, scratch.key);
                 backend.matmul(scratch.hidden_scratch, layer.self_attn.v_proj, scratch.value);
 
-                backend.rmsnorm(scratch.query, layer.self_attn.q_norm, scratch.query, config.rms_norm_eps);
-                backend.rmsnorm(scratch.key, layer.self_attn.k_norm, scratch.key, config.rms_norm_eps);
 
-                backend.rope(scratch.query, rope_cache, token_pos);
-                backend.rope(scratch.key, rope_cache, token_pos);
-
+                backend.qk_norm_rope(scratch.query, scratch.key, layer.self_attn.q_norm, layer.self_attn.k_norm, rope_cache, token_pos,
+                                     config.rms_norm_eps);
+                // todo fused kv cache update with matmul and qk_norm_rope
                 backend.kv_cache_update(scratch.key, scratch.value, layer_cache.key, layer_cache.value, kv_cache.token_count);
 
                 backend.self_attention(scratch.query, layer_cache.key, layer_cache.value, scratch.query, token_pos);
 
                 backend.matmul(scratch.query, layer.self_attn.o_proj, scratch.hidden_scratch);
+                // todo add rmsnorm add?
                 backend.add(scratch.hidden_state, scratch.hidden_scratch, scratch.hidden_state);
-
                 backend.rmsnorm(scratch.hidden_state, layer.post_attention_layernorm, scratch.hidden_scratch, config.rms_norm_eps);
 
                 backend.matmul(scratch.hidden_scratch, layer.mlp.gate_proj, scratch.gate);

@@ -23,7 +23,7 @@ namespace inference {
             }
 
             [[nodiscard]] void* allocate(std::size_t size_bytes) override {
-                return operator new(size_bytes, std::align_val_t{ alignment });
+                return operator new(size_bytes, alignment);
             }
 
             [[nodiscard]] Tensor make_tensor(const std::span<const std::byte> source, const TensorShape& shape, const types::DType dtype) override {
@@ -39,7 +39,7 @@ namespace inference {
             }
 
             void deallocate(void* pointer, std::size_t bytes) noexcept override {
-                operator delete(pointer, bytes, std::align_val_t{ alignment });
+                operator delete(pointer, bytes, alignment);
             }
 
             void embedding(const types::TokenId token_id, const Tensor& weights, Tensor& output) override {
@@ -52,7 +52,7 @@ namespace inference {
                 kernels::matmul_avx512bf16(input.view<bf16_t>(), weights.view<bf16_t>(), output.view<bf16_t>());
             }
 
-            void rmsnorm(const Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) override {
+            void rmsnorm(Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) override {
                 assert(output.dtype() == types::DType::BF16);
                 kernels::rmsnorm(input.view<bf16_t>(), weight.view<bf16_t>(), output.view<bf16_t>(), epsilon);
             }
@@ -88,8 +88,17 @@ namespace inference {
                 return kernels::argmax_avx512bf16(logits.view<bf16_t>());
             }
 
+            // todo actually add fused op here
+            void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const RopeCache& cache, std::size_t token_pos,
+                              float eps) override {
+                kernels::rmsnorm(query.view<bf16_t>(), q_norm.view<bf16_t>(), query.view<bf16_t>(), eps);
+                kernels::rmsnorm(key.view<bf16_t>(), k_norm.view<bf16_t>(), key.view<bf16_t>(), eps);
+                kernels::rope(query.view<bf16_t>(), cache.view(), token_pos);
+                kernels::rope(key.view<bf16_t>(), cache.view(), token_pos);
+            }
+
         private:
-            static constexpr std::size_t alignment = 64;
+            static constexpr std::align_val_t alignment{ 64 };
         };
     } // namespace cpu
 

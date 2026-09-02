@@ -18,12 +18,14 @@ namespace test {
         constexpr TensorShape shape{ head_count, head_size };
 
         auto& target_backend = backend();
-        const auto cache = make_rope_cache(position + 1, head_size, theta, target_backend);
+        auto& cpu_backend = Backend::get_backend<types::Device::CPU>();
+        const auto reference_cache = make_rope_cache(position + 1, head_size, theta, cpu_backend);
+        const auto target_cache = make_rope_cache(position + 1, head_size, theta, target_backend);
         auto expected = util::random_bf16_tensor(shape, util::RandomSeed{ 1 });
         auto actual = target_backend.make_tensor(expected.bytes(), expected.shape(), expected.dtype());
 
-        reference::rope(expected.view<cpu::bf16_t>(), theta, position);
-        target_backend.rope(actual, cache, position);
+        reference::rope(expected.view<cpu::bf16_t>(), reference_cache.view(), position);
+        target_backend.rope(actual, target_cache, position);
 
         const auto actual_values = util::copy_tensor_to_host<cpu::bf16_t>(actual);
         for (const auto [expected_value, actual_value] : std::views::zip(expected.view<cpu::bf16_t>(), actual_values)) {

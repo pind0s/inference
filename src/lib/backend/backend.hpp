@@ -23,12 +23,14 @@ namespace inference {
 
         virtual void embedding(types::TokenId token_id, const Tensor& weights, Tensor& output) = 0;
         virtual void matmul(const Tensor& input, const Tensor& weights, Tensor& output) = 0;
-        virtual void rmsnorm(const Tensor& input, const Tensor& weight, Tensor& output, float epsilon) = 0;
+        virtual void rmsnorm(Tensor& input, const Tensor& weight, Tensor& output, float epsilon) = 0;
         virtual void rope(Tensor& values, const RopeCache& cache, std::size_t position) = 0;
         virtual void kv_cache_update(const Tensor& key, const Tensor& value, Tensor& cached_key, Tensor& cached_value, std::size_t token_offset) = 0;
         virtual void self_attention(const Tensor& query, const Tensor& key, const Tensor& value, Tensor& output, std::size_t position) = 0;
         virtual void add(const Tensor& left, const Tensor& right, Tensor& output) = 0;
         virtual void silu(const Tensor& gate, const Tensor& up, Tensor& output) = 0;
+        virtual void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const RopeCache& cache, std::size_t token_pos,
+                                  float eps) = 0;
         [[nodiscard]] virtual types::TokenId argmax(const Tensor& logits) = 0;
 
         template <types::Device D>
