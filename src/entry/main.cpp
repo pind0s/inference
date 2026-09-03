@@ -1,19 +1,18 @@
+#include "config.hpp"
 #include "inference/generator.hpp"
 #include <exception>
 #include <print>
 #include <string>
 
 int main(const int argc, char* argv[]) try {
-    if (argc < 2) throw std::invalid_argument("entry: missing model path");
-
-    const std::string prompt = "Tell me a short story about llms";
-    constexpr std::size_t max_context_size = 1024;
-    constexpr auto device = inference::types::Device::CUDA;
-
-    auto generator = inference::Generator::load(argv[1], device, max_context_size);
-
+    const auto [model_path, context_size, device] = Args::parse_args(argc, argv);
+    const std::string prompt = "Tell me a short story about LLMs";
     std::println("Prompt: {}", prompt);
-    std::println("Response: {}", generator.generate(prompt));
+
+    auto generator = inference::Generator::load(model_path, device, context_size);
+    const auto response = generator.generate(prompt);
+
+    std::println("Response: {}", response);
 } catch (const std::exception& error) {
     std::println(stderr, "Error: {}", error.what());
     return 1;

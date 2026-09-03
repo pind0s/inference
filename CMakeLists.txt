@@ -3,6 +3,7 @@ project(inference LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 23)
 
+find_package(argparse CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS regex)
 find_package(ICU REQUIRED COMPONENTS uc i18n)
@@ -35,7 +36,7 @@ target_link_libraries(inference_lib
 
 add_executable(inference src/entry/main.cpp)
 
-target_link_libraries(inference PRIVATE inference_lib)
+target_link_libraries(inference PRIVATE inference_lib argparse::argparse)
 
 include(CTest)
 if (BUILD_TESTING)
