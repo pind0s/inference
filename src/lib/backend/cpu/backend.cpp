@@ -3,6 +3,7 @@
 #include "backend/cpu/kernels/embedding.hpp"
 #include "backend/cpu/kernels/kv_cache.hpp"
 #include "backend/cpu/kernels/matmul.hpp"
+#include "backend/cpu/kernels/qk_norm_rope.hpp"
 #include "backend/cpu/kernels/rmsnorm.hpp"
 #include "backend/cpu/kernels/rope.hpp"
 #include "backend/cpu/kernels/sampling.hpp"
@@ -88,13 +89,10 @@ namespace inference {
                 return kernels::argmax_avx512bf16(logits.view<bf16_t>());
             }
 
-            // todo actually add fused op here
             void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const RopeCache& cache, std::size_t token_pos,
                               float eps) override {
-                kernels::rmsnorm(query.view<bf16_t>(), q_norm.view<bf16_t>(), query.view<bf16_t>(), eps);
-                kernels::rmsnorm(key.view<bf16_t>(), k_norm.view<bf16_t>(), key.view<bf16_t>(), eps);
-                kernels::rope(query.view<bf16_t>(), cache.view(), token_pos);
-                kernels::rope(key.view<bf16_t>(), cache.view(), token_pos);
+                kernels::qk_norm_rope(query.view<bf16_t>(), key.view<bf16_t>(), q_norm.view<bf16_t>(), k_norm.view<bf16_t>(), cache.view(), token_pos,
+                                      eps);
             }
 
         private:

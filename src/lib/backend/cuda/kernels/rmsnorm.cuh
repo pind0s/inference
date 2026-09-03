@@ -19,16 +19,14 @@ namespace inference::gpu::kernels {
 
                 auto smem = cuda::dynamic_shared_memory(config);
 
-                const auto row_size = weight.size();
-                const auto row = cuda::block.rank(cuda::grid, config);
+                const auto hidden_size = input.size();
                 const auto thread_index = cuda::gpu_thread.rank(cuda::block, config);
                 const auto block_thread_count = cuda::gpu_thread.count(cuda::block, config);
-                const auto row_base = row * row_size;
 
                 float local_sum = 0.0f;
-                for (std::size_t col = thread_index; col < row_size; col += block_thread_count) {
-                    const float value = __bfloat162float(input[row_base + col]);
-                    smem[col] = value;
+                for (std::size_t index = thread_index; index < hidden_size; index += block_thread_count) {
+                    const float value = __bfloat162float(input[index]);
+                    smem[index] = value;
                     local_sum += value * value;
                 }
 
@@ -37,13 +35,13 @@ namespace inference::gpu::kernels {
                 const float sum_of_squares = BlockReduce(reduce_storage).Sum(local_sum);
 
                 if (thread_index == 0) {
-                    scale = 1.0f / cuda::std::sqrtf(sum_of_squares / static_cast<float>(row_size) + epsilon);
+                    scale = 1.0f / cuda::std::sqrtf(sum_of_squares / static_cast<float>(hidden_size) + epsilon);
                 }
                 __syncthreads();
 
-                for (std::size_t col = thread_index; col < row_size; col += block_thread_count) {
-                    auto weight_value = __bfloat162float(weight(col));
-                    output[row_base + col] = __float2bfloat16(smem[col] * scale * weight_value);
+                for (std::size_t index = thread_index; index < hidden_size; index += block_thread_count) {
+                    auto weight_value = __bfloat162float(weight(index));
+                    output[index] = __float2bfloat16(smem[index] * scale * weight_value);
                 }
             }
         };
@@ -51,10 +49,9 @@ namespace inference::gpu::kernels {
 
     inline void rmsnorm(const cuda::stream_ref stream, const TensorView<__nv_bfloat16> input, const TensorView<const __nv_bfloat16> weight,
                         const TensorView<__nv_bfloat16> output, float epsilon) {
-        const auto row_size = weight.size();
-        const auto row_count = input.size() / row_size;
-        const auto shared_memory = cuda::dynamic_shared_memory<float[]>(row_size);
-        const auto config = cuda::make_config(cuda::grid_dims(row_count), cuda::block_dims<util::threads_per_block>(), shared_memory);
+        const auto hidden_size = input.size();
+        const auto shared_memory = cuda::dynamic_shared_memory<float[]>(hidden_size);
+        const auto config = cuda::make_config(cuda::grid_dims(1), cuda::block_dims<util::threads_per_block>(), shared_memory);
         cuda::launch(stream, config, detail::RmsNormKernel{}, input, weight, output, epsilon);
     }
 } // namespace inference::gpu::kernels
