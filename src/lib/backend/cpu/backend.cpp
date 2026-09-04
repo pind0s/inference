@@ -49,8 +49,16 @@ namespace inference {
             }
 
             void matmul(const Tensor& input, const Tensor& weights, Tensor& output) override {
-                assert(output.dtype() == types::DType::BF16);
-                kernels::matmul_avx512bf16(input.view<bf16_t>(), weights.view<bf16_t>(), output.view<bf16_t>());
+                // since we don't support any batching/prefill optimizations, all our matmul are just a simple general matrix vector mul
+                if (input.size() != weights.shape().dim(1)) {
+                    throw std::runtime_error("backend::cpu::matmul we only support gemv op");
+                }
+
+                if (input.size() % 32 != 0) {
+                    throw std::runtime_error("backend::cpu::matmul data is not aligned to 32");
+                }
+
+                kernels::gemv(input.view<bf16_t>(), weights.view<bf16_t>(), output.view<bf16_t>());
             }
 
             void rmsnorm(Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) override {
