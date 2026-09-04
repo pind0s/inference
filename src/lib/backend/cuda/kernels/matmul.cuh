@@ -4,7 +4,7 @@
 #include <cuda_bf16.h>
 
 namespace inference::gpu::kernels {
-
+    // todo replace with my implementation. Also, because we don't do any prefill or batching, we only need GEMV(general matrix vector multiply)
     inline void matmul_cublas_bf16(const cublasHandle_t handle, const TensorView<const __nv_bfloat16> input, const TensorView<const __nv_bfloat16> weights,
                                    const TensorView<__nv_bfloat16>& output) {
         const auto inner_size = weights.dim(1);

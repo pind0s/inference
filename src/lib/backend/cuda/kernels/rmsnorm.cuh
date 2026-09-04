@@ -1,9 +1,7 @@
 #pragma once
-#include "backend/cuda/kernels/util.cuh"
 #include "tensor/tensor_view.hpp"
 #include <cub/block/block_reduce.cuh>
 #include <cuda/cmath>
-#include <cuda/hierarchy>
 #include <cuda/launch>
 #include <cuda_bf16.h>
 #include <cuda_runtime.h>
@@ -12,7 +10,7 @@ namespace inference::gpu::kernels {
     namespace detail {
 
         struct RmsNormBf16 {
-            using BlockReduce = cub::BlockReduce<float, util::threads_per_block>;
+            using BlockReduce = cub::BlockReduce<float, 256>;
 
             template <typename Configuration>
             __device__ void operator()(const Configuration& config, TensorView<__nv_bfloat16> residual, TensorView<const __nv_bfloat16> weight,
@@ -48,7 +46,7 @@ namespace inference::gpu::kernels {
         };
 
         struct RmsNormAddBf16 {
-            using BlockReduce = cub::BlockReduce<float, util::threads_per_block>;
+            using BlockReduce = cub::BlockReduce<float, 256>;
 
             template <typename Configuration>
             __device__ void operator()(const Configuration& config, TensorView<__nv_bfloat16> residual, TensorView<const __nv_bfloat16> residual_update,
@@ -86,13 +84,13 @@ namespace inference::gpu::kernels {
                         const TensorView<__nv_bfloat16> output, float epsilon) {
         const auto hidden_size = input.size();
         const auto shared_memory = cuda::dynamic_shared_memory<float[]>(hidden_size);
-        const auto config = cuda::make_config(cuda::grid_dims(1), cuda::block_dims<util::threads_per_block>(), shared_memory);
+        const auto config = cuda::make_config(cuda::grid_dims(1), cuda::block_dims<256>(), shared_memory);
         cuda::launch(stream, config, detail::RmsNormBf16{}, input, weight, output, epsilon);
     }
 
     inline void rmsnorm_add(const cuda::stream_ref stream, const TensorView<__nv_bfloat16> residual, const TensorView<const __nv_bfloat16> residual_update,
                             const TensorView<const __nv_bfloat16> weight, const TensorView<__nv_bfloat16> output, float epsilon) {
-        const auto config = cuda::make_config(cuda::grid_dims(1), cuda::block_dims<util::threads_per_block>());
+        const auto config = cuda::make_config(cuda::grid_dims(1), cuda::block_dims<256>());
         cuda::launch(stream, config, detail::RmsNormAddBf16{}, residual, residual_update, weight, output, epsilon);
     }
 } // namespace inference::gpu::kernels

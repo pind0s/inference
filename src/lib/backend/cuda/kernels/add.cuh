@@ -1,6 +1,5 @@
 #pragma once
 #include "tensor/tensor_view.hpp"
-#include "util.cuh"
 #include <cuda/cmath>
 #include <cuda/launch>
 #include <cuda/stream>
@@ -26,8 +25,8 @@ namespace inference::gpu::kernels {
     inline void add(const cuda::stream_ref stream, TensorView<const __nv_bfloat16> lhs, TensorView<const __nv_bfloat16> rhs,
                     TensorView<__nv_bfloat16> output) {
         const auto element_count = output.size();
-        const auto block_count = cuda::ceil_div(element_count, util::threads_per_block);
-        const auto config = cuda::make_config(cuda::grid_dims(block_count), cuda::block_dims<util::threads_per_block>());
+        const auto block_count = cuda::ceil_div(element_count, 256);
+        const auto config = cuda::make_config(cuda::grid_dims(block_count), cuda::block_dims<256>());
         cuda::launch(stream, config, detail::AddBf16{}, lhs, rhs, output);
     }
 } // namespace inference::gpu::kernels

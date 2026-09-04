@@ -1,6 +1,5 @@
 #pragma once
-#include "../../util/rope_cache.hpp"
-#include "backend/cuda/kernels/util.cuh"
+#include "backend/util/rope_cache.hpp"
 #include "tensor/tensor_view.hpp"
 #include <cuda/cmath>
 #include <cuda/launch>
@@ -46,8 +45,8 @@ namespace inference::gpu::kernels {
     inline void rope(cuda::stream_ref stream, const TensorView<__nv_bfloat16> values, const RopeCacheView cache, const std::size_t token_pos) {
         const auto head_count = values.dim(0);
         const auto head_size = values.dim(1);
-        const auto block_count = cuda::ceil_div(head_count * head_size / 2, util::threads_per_block);
-        const auto config = cuda::make_config(cuda::grid_dims(block_count), cuda::block_dims<util::threads_per_block>());
+        const auto block_count = cuda::ceil_div(head_count * head_size / 2, 256);
+        const auto config = cuda::make_config(cuda::grid_dims(block_count), cuda::block_dims<256>());
 
         auto args = detail::RopeBf16::Args{
             .values = values,
