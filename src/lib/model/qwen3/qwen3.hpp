@@ -69,7 +69,7 @@ namespace inference::model::qwen3 {
 
     struct ScratchSpace {
         Tensor hidden_state;
-        Tensor hidden_scratch;
+        Tensor hidden;
         Tensor query;
         Tensor key;
         Tensor value;
@@ -79,7 +79,7 @@ namespace inference::model::qwen3 {
 
         ScratchSpace(const Config& config, Backend& backend)
             : hidden_state(Tensor::empty({ config.hidden_size }, config.dtype, backend)),
-              hidden_scratch(Tensor::empty({ config.hidden_size }, config.dtype, backend)),
+              hidden(Tensor::empty({ config.hidden_size }, config.dtype, backend)),
               query(Tensor::empty({ config.num_attention_heads, config.head_dim }, config.dtype, backend)),
               key(Tensor::empty({ config.num_key_value_heads, config.head_dim }, config.dtype, backend)),
               value(Tensor::empty({ config.num_key_value_heads, config.head_dim }, config.dtype, backend)),
@@ -138,35 +138,33 @@ namespace inference::model::qwen3 {
             backend.embedding(token_id, embed_tokens, scratch.hidden_state);
 
             for (auto&& [layer, layer_cache] : std::views::zip(layers, kv_cache.layers)) {
-                backend.rmsnorm(scratch.hidden_state, layer.input_layernorm, scratch.hidden_scratch, config.rms_norm_eps);
+                backend.rmsnorm(scratch.hidden_state, layer.input_layernorm, scratch.hidden, config.rms_norm_eps);
 
-                backend.matmul(scratch.hidden_scratch, layer.self_attn.q_proj, scratch.query);
-                backend.matmul(scratch.hidden_scratch, layer.self_attn.k_proj, scratch.key);
-                backend.matmul(scratch.hidden_scratch, layer.self_attn.v_proj, scratch.value);
-
+                backend.matmul(scratch.hidden, layer.self_attn.q_proj, scratch.query);
+                backend.matmul(scratch.hidden, layer.self_attn.k_proj, scratch.key);
+                backend.matmul(scratch.hidden, layer.self_attn.v_proj, scratch.value);
 
                 backend.qk_norm_rope(scratch.query, scratch.key, layer.self_attn.q_norm, layer.self_attn.k_norm, rope_cache, token_pos,
                                      config.rms_norm_eps);
+
                 // todo fused kv cache update with matmul and qk_norm_rope
                 backend.kv_cache_update(scratch.key, scratch.value, layer_cache.key, layer_cache.value, kv_cache.token_count);
 
                 backend.self_attention(scratch.query, layer_cache.key, layer_cache.value, scratch.query, token_pos);
 
-                backend.matmul(scratch.query, layer.self_attn.o_proj, scratch.hidden_scratch);
-                // todo add rmsnorm add?
-                backend.add(scratch.hidden_state, scratch.hidden_scratch, scratch.hidden_state);
-                backend.rmsnorm(scratch.hidden_state, layer.post_attention_layernorm, scratch.hidden_scratch, config.rms_norm_eps);
+                backend.matmul(scratch.query, layer.self_attn.o_proj, scratch.hidden);
+                backend.rmsnorm_add(scratch.hidden_state, scratch.hidden, layer.post_attention_layernorm, scratch.hidden, config.rms_norm_eps);
 
-                backend.matmul(scratch.hidden_scratch, layer.mlp.gate_proj, scratch.gate);
-                backend.matmul(scratch.hidden_scratch, layer.mlp.up_proj, scratch.up);
+                backend.matmul(scratch.hidden, layer.mlp.gate_proj, scratch.gate);
+                backend.matmul(scratch.hidden, layer.mlp.up_proj, scratch.up);
                 backend.silu(scratch.gate, scratch.up, scratch.gate);
 
-                backend.matmul(scratch.gate, layer.mlp.down_proj, scratch.hidden_scratch);
-                backend.add(scratch.hidden_state, scratch.hidden_scratch, scratch.hidden_state);
+                backend.matmul(scratch.gate, layer.mlp.down_proj, scratch.hidden);
+                backend.add(scratch.hidden_state, scratch.hidden, scratch.hidden_state);
             }
 
-            backend.rmsnorm(scratch.hidden_state, norm, scratch.hidden_scratch, config.rms_norm_eps);
-            backend.matmul(scratch.hidden_scratch, lm_head, scratch.logits);
+            backend.rmsnorm(scratch.hidden_state, norm, scratch.hidden, config.rms_norm_eps);
+            backend.matmul(scratch.hidden, lm_head, scratch.logits);
             ++kv_cache.token_count;
             return backend.argmax(scratch.logits);
         }

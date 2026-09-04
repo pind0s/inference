@@ -58,6 +58,11 @@ namespace inference {
                 kernels::rmsnorm(input.view<bf16_t>(), weight.view<bf16_t>(), output.view<bf16_t>(), epsilon);
             }
 
+            void rmsnorm_add(Tensor& residual, const Tensor& residual_update, const Tensor& weight, Tensor& output, const float epsilon) override {
+                assert(output.dtype() == types::DType::BF16);
+                kernels::rmsnorm_add(residual.view<bf16_t>(), residual_update.view<bf16_t>(), weight.view<bf16_t>(), output.view<bf16_t>(), epsilon);
+            }
+
             void rope(Tensor& values, const RopeCache& cache, const std::size_t position) override {
                 assert(values.dtype() == types::DType::BF16);
                 kernels::rope(values.view<bf16_t>(), cache.view(), position);
