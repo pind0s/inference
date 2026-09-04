@@ -30,8 +30,8 @@ target_link_libraries(inference_lib
         ICU::uc
         ICU::i18n
         PRIVATE
-        inference_cpu
-        inference_cuda
+        backend_cpu
+        backend_cuda
 )
 
 add_executable(inference src/entry/main.cpp)
