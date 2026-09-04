@@ -1,6 +1,6 @@
 find_package(OpenMP REQUIRED COMPONENTS CXX)
 
-add_library(backend_cpu STATIC backend.cpp bf16.cpp)
+add_library(backend_cpu STATIC backend.cpp)
 
 target_include_directories(backend_cpu PUBLIC ../..)
 
