@@ -112,3 +112,5 @@ TabWidth: 8
 LineEnding: LF
 RequiresExpressionIndentation: OuterScope
 BinPackLongBracedList: true
+RequiresClausePosition: OwnLine
+IndentRequiresClause: false

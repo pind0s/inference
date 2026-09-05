@@ -14,7 +14,7 @@ namespace inference {
         }
 
         template <typename... Indices>
-            requires(std::integral<Indices> && ...)
+        requires(std::integral<Indices> && ...)
         [[nodiscard]] HOST_DEVICE constexpr T& operator()(const Indices... indices) const noexcept {
             assert(shape_.rank() == sizeof...(Indices));
 

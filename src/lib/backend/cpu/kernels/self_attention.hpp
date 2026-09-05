@@ -11,8 +11,8 @@ namespace inference::cpu::kernels {
     inline void self_attention(TensorView<const bf16_t> query, TensorView<const bf16_t> key, TensorView<const bf16_t> value, TensorView<bf16_t> output,
                                std::size_t pos) {
 
-        constexpr std::size_t lanes = 16;
-        constexpr std::size_t bf16_dot_lanes = 32;
+        constexpr auto lanes = avx::lanes_v<avx::f32x16>;
+        constexpr auto bf16_dot_lanes = avx::lanes_v<avx::bf16x32>;
         const auto num_query_heads = query.dim(0);
         const auto num_kv_heads = key.dim(1);
         const auto head_size = query.dim(1);
@@ -24,11 +24,11 @@ namespace inference::cpu::kernels {
             std::vector<float> scores(pos + 1);
 
             const auto key_value_head = query_head / queries_per_key_value;
-            auto maximum_score = -std::numeric_limits<float>::infinity();
+            auto maximum_score = std::numeric_limits<float>::lowest();
 
             for (std::size_t key_position = 0; key_position <= pos; ++key_position) {
                 std::size_t index = 0;
-                auto score_accumulator = avx::zero();
+                avx::f32x16 score_accumulator{};
 
                 for (; index + bf16_dot_lanes <= head_size; index += bf16_dot_lanes) {
                     const auto q = avx::load<avx::bf16x32>(&query(query_head, index));

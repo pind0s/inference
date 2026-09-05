@@ -2,12 +2,14 @@
 #include "types/device.hpp"
 #include "types/dtype.hpp"
 #include "types/token.hpp"
-#include "util/rope_cache.hpp"
 #include <cstddef>
 #include <span>
 #include <stdexcept>
 
 namespace inference {
+    namespace backend {
+        struct RopeCache;
+    }
     class TensorShape;
     class Tensor;
 

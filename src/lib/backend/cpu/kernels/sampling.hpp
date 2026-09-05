@@ -12,7 +12,7 @@ namespace inference::cpu::kernels {
         float max_value = std::numeric_limits<float>::lowest();
         std::size_t block_index = 0;
 
-        constexpr std::size_t lanes = 16;
+        constexpr auto lanes = avx::lanes_v<avx::f32x16>;
         const auto simd_end = num_elems - (num_elems % lanes);
 
         for (std::size_t i = 0; i < simd_end; i += lanes) {
