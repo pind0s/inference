@@ -48,11 +48,10 @@ TEST_CASE("rmsnorm add matches separate add and rmsnorm", "[backend][rmsnorm_add
     const auto update = test::random_bf16({ hidden_size }, backend, { 1 });
     const auto weight = test::random_bf16({ hidden_size }, backend, { 2 });
     auto expected_residual = Tensor::empty(residual.shape(), types::DType::BF16, backend);
-    auto expected_output = Tensor::empty(residual.shape(), types::DType::BF16, backend);
     auto output = Tensor::empty(residual.shape(), types::DType::BF16, backend);
 
     backend.add(residual, update, expected_residual);
-    backend.rmsnorm(expected_residual, weight, expected_output, epsilon);
+    const auto expected_output = test::reference::rmsnorm(expected_residual, weight, epsilon);
     backend.rmsnorm_add(residual, update, weight, output, epsilon);
 
     const auto residual_host = test::to_host(residual);

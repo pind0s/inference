@@ -13,7 +13,6 @@
 #include <cuda_runtime_api.h>
 #include <stdexcept>
 
-constexpr std::size_t query_head_count = 8;
 constexpr std::size_t head_size = 128;
 constexpr float theta = 1'000'000.0f;
 constexpr float epsilon = 1e-6f;
@@ -26,8 +25,9 @@ TEST_CASE("qk norm rope matches the reference", "[backend][qk_norm_rope]") {
     auto& backend = Backend::select_backend(device);
 
     const auto key_head_count = GENERATE(2uz, 8uz);
+    constexpr std::size_t query_head_count = 8;
     const auto position = GENERATE(0uz, 1uz, 50uz);
-    CAPTURE(key_head_count, position);
+    CAPTURE(key_head_count, head_size, position);
 
     auto query = test::random_bf16({ query_head_count, head_size }, backend);
     auto key = test::random_bf16({ key_head_count, head_size }, backend, { 1 });
@@ -40,7 +40,6 @@ TEST_CASE("qk norm rope matches the reference", "[backend][qk_norm_rope]") {
     backend.qk_norm_rope(query, key, q_norm, k_norm, cache, position, epsilon);
     const auto query_host = test::to_host(query);
     const auto key_host = test::to_host(key);
-    // Separate RMSNorm rounds to BF16 before RoPE, which matters near cancellation.
     CHECK_THAT(query_host, test::WithinRel(expected_query, 0.01f, 0.01f));
     CHECK_THAT(key_host, test::WithinRel(expected_key, 0.01f, 0.01f));
 }
@@ -52,7 +51,8 @@ TEST_CASE("qk norm rope benchmark", "[benchmark][qk_norm_rope]") {
     CAPTURE(types::device_to_string(device));
     auto& backend = Backend::select_backend(device);
 
-    constexpr std::size_t key_head_count = 2;
+    constexpr std::size_t query_head_count = 64;
+    constexpr std::size_t key_head_count = 32;
     constexpr std::size_t position = 50;
     auto query = test::random_bf16({ query_head_count, head_size }, backend);
     auto key = test::random_bf16({ key_head_count, head_size }, backend);

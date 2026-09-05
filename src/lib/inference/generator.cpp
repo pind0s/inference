@@ -6,9 +6,11 @@
 #include "tokenizer/tokenizer.hpp"
 #include "types/device.hpp"
 #include "util/files.hpp"
+#include <chrono>
 #include <filesystem>
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <print>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -43,6 +45,7 @@ namespace inference {
 
         tokenizer::TokenList response;
         auto next_token = model_.prefill(input_tokens, backend_, kv_cache_);
+        const auto generation_start = std::chrono::steady_clock::now();
         while (kv_cache_.token_count + 1 < kv_cache_.capacity) {
             next_token = model_.forward(next_token, backend_, kv_cache_);
 
@@ -51,6 +54,10 @@ namespace inference {
             }
             response.emplace_back(next_token);
         }
+
+        const auto generation_time = std::chrono::duration<double>(std::chrono::steady_clock::now() - generation_start).count();
+        const auto tokens_per_second = generation_time > 0.0 ? static_cast<double>(response.size()) / generation_time : 0.0;
+        std::println("Generated {} tokens at {:.2f} tokens/s", response.size(), tokens_per_second);
 
         return tokenizer_.decode(response);
     }

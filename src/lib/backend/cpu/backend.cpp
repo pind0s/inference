@@ -63,11 +63,17 @@ namespace inference {
 
             void rmsnorm(Tensor& input, const Tensor& weight, Tensor& output, const float epsilon) override {
                 assert(output.dtype() == types::DType::BF16);
+                if (input.size() % 32 != 0) {
+                    throw std::runtime_error("backend::cpu::rmsnorm hidden size must be a multiple of 32");
+                }
                 kernels::rmsnorm(input.view<bf16_t>(), weight.view<bf16_t>(), output.view<bf16_t>(), epsilon);
             }
 
             void rmsnorm_add(Tensor& residual, const Tensor& residual_update, const Tensor& weight, Tensor& output, const float epsilon) override {
                 assert(output.dtype() == types::DType::BF16);
+                if (residual.size() % 16 != 0) {
+                    throw std::runtime_error("backend::cpu::rmsnorm_add hidden size must be a multiple of 16");
+                }
                 kernels::rmsnorm_add(residual.view<bf16_t>(), residual_update.view<bf16_t>(), weight.view<bf16_t>(), output.view<bf16_t>(), epsilon);
             }
 
@@ -104,6 +110,9 @@ namespace inference {
 
             void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const backend::RopeCache& cache,
                               std::size_t token_pos, float eps) override {
+                if (query.shape().dim(1) % 32 != 0) {
+                    throw std::runtime_error("backend::cpu::qk_norm_rope head size must be a multiple of 32");
+                }
                 kernels::qk_norm_rope(query.view<bf16_t>(), key.view<bf16_t>(), q_norm.view<bf16_t>(), k_norm.view<bf16_t>(), cache.view(), token_pos,
                                       eps);
             }
