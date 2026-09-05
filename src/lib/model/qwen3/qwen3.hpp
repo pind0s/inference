@@ -95,7 +95,7 @@ namespace inference::model::qwen3 {
         Tensor norm;
         Tensor lm_head;
         std::vector<Layer> layers;
-        RopeCache rope_cache;
+        backend::RopeCache rope_cache;
         ScratchSpace scratch;
 
         [[nodiscard]] static std::string apply_chat_template(const std::string_view prompt) {
@@ -126,7 +126,7 @@ namespace inference::model::qwen3 {
                 .norm = std::move(norm),
                 .lm_head = std::move(lm_head),
                 .layers = std::move(layers),
-                .rope_cache = make_rope_cache(context_size, config.head_dim, config.rope_theta, backend),
+                .rope_cache = backend::make_rope_cache(context_size, config.head_dim, config.rope_theta, backend),
                 .scratch = ScratchSpace{ config, backend },
             };
         }
@@ -140,6 +140,7 @@ namespace inference::model::qwen3 {
             for (auto&& [layer, layer_cache] : std::views::zip(layers, kv_cache.layers)) {
                 backend.rmsnorm(scratch.hidden_state, layer.input_layernorm, scratch.hidden, config.rms_norm_eps);
 
+                // todo pack the qkv into one big tensor
                 backend.matmul(scratch.hidden, layer.self_attn.q_proj, scratch.query);
                 backend.matmul(scratch.hidden, layer.self_attn.k_proj, scratch.key);
                 backend.matmul(scratch.hidden, layer.self_attn.v_proj, scratch.value);
@@ -171,7 +172,7 @@ namespace inference::model::qwen3 {
 
         [[nodiscard]] types::TokenId prefill(const std::span<const types::TokenId> token_ids, Backend& backend, KVCache& kv_cache) {
             for (const auto token_id : token_ids.first(token_ids.size() - 1)) {
-                auto _ = forward(token_id, backend, kv_cache);
+                std::ignore = forward(token_id, backend, kv_cache);
             }
             return token_ids.back();
         }

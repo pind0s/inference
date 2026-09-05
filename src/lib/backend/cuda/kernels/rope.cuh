@@ -11,7 +11,7 @@ namespace inference::gpu::kernels {
 
             struct Args {
                 TensorView<__nv_bfloat16> values;
-                RopeCacheView cache;
+                backend::RopeCacheView cache;
                 std::size_t token_pos;
             };
 
@@ -42,7 +42,7 @@ namespace inference::gpu::kernels {
         };
     } // namespace detail
 
-    inline void rope(cuda::stream_ref stream, const TensorView<__nv_bfloat16> values, const RopeCacheView cache, const std::size_t token_pos) {
+    inline void rope(cuda::stream_ref stream, const TensorView<__nv_bfloat16> values, const backend::RopeCacheView cache, const std::size_t token_pos) {
         const auto head_count = values.dim(0);
         const auto head_size = values.dim(1);
         const auto block_count = cuda::ceil_div(head_count * head_size / 2, 256);

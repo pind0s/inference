@@ -24,14 +24,20 @@ namespace inference::cpu::kernels {
             }
         }
 
-        if (simd_end < num_elems) {
-            const auto* tail_max = std::max_element(logits.data() + simd_end, logits.data() + num_elems);
-            if (tail_max->to_float() > max_value) {
-                return static_cast<types::TokenId>(tail_max - logits.data());
+        std::size_t maximum_index = 0;
+        if (simd_end != 0) {
+            maximum_index = std::max_element(logits.data() + block_index, logits.data() + block_index + lanes) - logits.data();
+        }
+
+        for (std::size_t i = simd_end; i < num_elems; ++i) {
+            const auto value = logits[i].to_float();
+            if (value > max_value) {
+                max_value = value;
+                maximum_index = i;
             }
         }
 
-        return static_cast<types::TokenId>(std::max_element(logits.data() + block_index, logits.data() + block_index + lanes) - logits.data());
+        return static_cast<types::TokenId>(maximum_index);
     }
 
 } // namespace inference::cpu::kernels

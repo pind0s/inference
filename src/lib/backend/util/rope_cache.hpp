@@ -4,8 +4,7 @@
 #include <utility>
 #include <vector>
 
-// todo put this under some namespace
-namespace inference {
+namespace inference::backend {
     struct RopeCacheView {
         TensorView<const float> cosine;
         TensorView<const float> sine;
@@ -43,4 +42,4 @@ namespace inference {
         auto sin_tensor = backend.make_tensor(std::as_bytes(std::span{ sin }), { max_position, half_size }, types::DType::F32);
         return { .cosine = std::move(cos_tensor), .sine = std::move(sin_tensor) };
     }
-} // namespace inference
+} // namespace inference::backend

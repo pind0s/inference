@@ -77,7 +77,7 @@ namespace inference {
                                      output.view<__nv_bfloat16>(), epsilon);
             }
 
-            void rope(Tensor& values, const RopeCache& cache, const std::size_t position) override {
+            void rope(Tensor& values, const backend::RopeCache& cache, const std::size_t position) override {
                 assert(values.dtype() == types::DType::BF16);
                 kernels::rope(stream_, values.view<__nv_bfloat16>(), cache.view(), position);
             }
@@ -121,8 +121,8 @@ namespace inference {
                 return static_cast<types::TokenId>(maximum - first);
             }
 
-            void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const RopeCache& cache, std::size_t token_pos,
-                              float eps) override {
+            void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const backend::RopeCache& cache,
+                              std::size_t token_pos, float eps) override {
                 assert(query.dtype() == types::DType::BF16);
                 assert(query.shape().dim(1) == 128);
 

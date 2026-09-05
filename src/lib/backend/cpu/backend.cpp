@@ -71,7 +71,7 @@ namespace inference {
                 kernels::rmsnorm_add(residual.view<bf16_t>(), residual_update.view<bf16_t>(), weight.view<bf16_t>(), output.view<bf16_t>(), epsilon);
             }
 
-            void rope(Tensor& values, const RopeCache& cache, const std::size_t position) override {
+            void rope(Tensor& values, const backend::RopeCache& cache, const std::size_t position) override {
                 assert(values.dtype() == types::DType::BF16);
                 kernels::rope(values.view<bf16_t>(), cache.view(), position);
             }
@@ -102,8 +102,8 @@ namespace inference {
                 return kernels::argmax_avx512bf16(logits.view<bf16_t>());
             }
 
-            void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const RopeCache& cache, std::size_t token_pos,
-                              float eps) override {
+            void qk_norm_rope(Tensor& query, Tensor& key, const Tensor& q_norm, const Tensor& k_norm, const backend::RopeCache& cache,
+                              std::size_t token_pos, float eps) override {
                 kernels::qk_norm_rope(query.view<bf16_t>(), key.view<bf16_t>(), q_norm.view<bf16_t>(), k_norm.view<bf16_t>(), cache.view(), token_pos,
                                       eps);
             }

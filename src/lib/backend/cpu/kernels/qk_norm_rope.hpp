@@ -7,7 +7,7 @@
 
 namespace inference::cpu::kernels {
     inline void qk_norm_rope(TensorView<bf16_t> query, TensorView<bf16_t> key, TensorView<const bf16_t> q_norm, TensorView<const bf16_t> k_norm,
-                             const RopeCacheView cache, const std::size_t position, const float epsilon) {
+                             const backend::RopeCacheView cache, const std::size_t position, const float epsilon) {
         const auto query_head_count = query.dim(0);
         const auto key_head_count = key.dim(0);
         const auto head_count = std::max(query_head_count, key_head_count);

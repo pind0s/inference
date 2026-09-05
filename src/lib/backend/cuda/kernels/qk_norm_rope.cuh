@@ -21,8 +21,8 @@ namespace inference::gpu::kernels {
 
             template <typename Configuration>
             __device__ void operator()(const Configuration& config, TensorView<__nv_bfloat16> query, TensorView<__nv_bfloat16> key,
-                                       TensorView<const __nv_bfloat16> q_norm, TensorView<const __nv_bfloat16> k_norm, const RopeCacheView& sin_cos,
-                                       std::size_t token_pos, float eps) {
+                                       TensorView<const __nv_bfloat16> q_norm, TensorView<const __nv_bfloat16> k_norm,
+                                       const backend::RopeCacheView& sin_cos, std::size_t token_pos, float eps) {
 
                 const auto head_size = query.dim(1);
                 const auto half_size = head_size / 2;
@@ -91,7 +91,7 @@ namespace inference::gpu::kernels {
     } // namespace detail
 
     inline void qk_norm_rope(const cuda::stream_ref stream, TensorView<__nv_bfloat16> query, TensorView<__nv_bfloat16> key,
-                             TensorView<const __nv_bfloat16> q_norm, TensorView<const __nv_bfloat16> k_norm, const RopeCacheView& sin_cos,
+                             TensorView<const __nv_bfloat16> q_norm, TensorView<const __nv_bfloat16> k_norm, const backend::RopeCacheView& sin_cos,
                              std::size_t token_pos, float eps) {
         // each block will handle 1 full row?
         const auto max_head_count = std::max(query.dim(0), key.dim(0));

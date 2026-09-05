@@ -1,11 +1,9 @@
-find_package(CUDAToolkit 13.3 REQUIRED)
-
 add_library(backend_cuda STATIC backend.cu)
 
 target_include_directories(backend_cuda PUBLIC ../..)
 
 target_link_libraries(backend_cuda
-        PUBLIC
+        PRIVATE
         CUDA::cudart
         CUDA::cublas
 )

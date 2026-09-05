@@ -4,7 +4,7 @@
 #include "tensor/tensor_view.hpp"
 
 namespace inference::cpu::kernels {
-    inline void rope(const TensorView<bf16_t>& values, const RopeCacheView cache, const std::size_t position) {
+    inline void rope(const TensorView<bf16_t>& values, const backend::RopeCacheView cache, const std::size_t position) {
         const auto head_count = values.dim(0);
         const auto head_size = values.dim(1);
         const auto half_size = head_size / 2;

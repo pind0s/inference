@@ -3,6 +3,7 @@ project(inference LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 23)
 
+find_package(CUDAToolkit REQUIRED)
 find_package(argparse CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS regex)
@@ -19,8 +20,6 @@ add_library(inference_lib STATIC
 target_include_directories(inference_lib
         PUBLIC
         src/lib
-        PRIVATE
-        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 )
 
 target_link_libraries(inference_lib
