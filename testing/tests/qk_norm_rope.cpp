@@ -34,6 +34,7 @@ TEST_CASE("qk norm rope matches the reference", "[backend][qk_norm_rope]") {
     const auto q_norm = test::random_bf16({ head_size }, backend, { 2 });
     const auto k_norm = test::random_bf16({ head_size }, backend, { 3 });
     const auto cache = backend::make_rope_cache(position + 1, head_size, theta, backend);
+
     const auto expected_query = test::reference::norm_rope(query, q_norm, cache, position, epsilon);
     const auto expected_key = test::reference::norm_rope(key, k_norm, cache, position, epsilon);
 
@@ -60,7 +61,7 @@ TEST_CASE("qk norm rope benchmark", "[benchmark][qk_norm_rope]") {
     const auto k_norm = test::random_bf16({ head_size }, backend);
     const auto cache = backend::make_rope_cache(position + 1, head_size, theta, backend);
 
-    BENCHMARK(types::device_to_string(device) + " QK Norm RoPE") {
+    BENCHMARK(types::device_to_string(device) + " qk norm rope") {
         backend.qk_norm_rope(query, key, q_norm, k_norm, cache, position, epsilon);
         if (device == types::Device::CUDA) {
             if (const auto error = cudaDeviceSynchronize(); error != cudaSuccess) {

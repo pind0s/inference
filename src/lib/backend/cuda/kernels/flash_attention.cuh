@@ -1,142 +1,185 @@
 #pragma once
+#include "tensor/tensor.hpp"
 #include "tensor/tensor_view.hpp"
+#include <cassert>
+#include <cub/block/block_reduce.cuh>
 #include <cuda/cmath>
 #include <cuda/launch>
 #include <cuda/std/algorithm>
 #include <cuda_bf16.h>
 
 namespace inference::gpu::kernels {
-    namespace detail {
-        constexpr std::size_t KV_TILE_SIZE = 32;
-        [[nodiscard]] constexpr std::size_t shared_memory_element_count(const std::size_t head_size) noexcept {
-            return (2 * KV_TILE_SIZE + 2) * head_size + KV_TILE_SIZE + 2;
-        }
+    inline constexpr std::size_t KV_TILE_SIZE = 16;
 
-        struct FlashAttentionBf16 {
+    struct FlashAttentionScratchView {
+        TensorView<float> maximum;
+        TensorView<float> denominator;
+        TensorView<float> numerator;
+    };
+
+    struct FlashAttentionScratch {
+        Tensor maximum;
+        Tensor denominator;
+        Tensor numerator;
+
+        [[nodiscard]] FlashAttentionScratchView view() noexcept {
+            return {
+                .maximum = maximum.view<float>(),
+                .denominator = denominator.view<float>(),
+                .numerator = numerator.view<float>(),
+            };
+        }
+    };
+
+    namespace detail {
+        constexpr int threads_per_block = 128;
+        using BlockReduce = cub::BlockReduce<float, threads_per_block>;
+
+        struct FlashAttentionDecodeBF16 {
             struct Args {
                 TensorView<const __nv_bfloat16> query;
                 TensorView<const __nv_bfloat16> key;
                 TensorView<const __nv_bfloat16> value;
-                TensorView<__nv_bfloat16> output;
+                FlashAttentionScratchView workspace;
                 std::size_t token_pos;
             };
 
-            // todo add cub reduction, and i think we can simplify the code?
             template <typename Configuration>
-            __device__ void operator()(const Configuration& config, Args args) const {
-                const auto head_dimension_index = cuda::gpu_thread.rank(cuda::block, config);
-                const auto query_head_index = cuda::block.rank(cuda::grid, config);
+            __device__ void operator()(const Configuration& config, Args args) {
+                const auto context_len = args.token_pos + 1;
+                const auto tile_per_head = cuda::ceil_div(context_len, KV_TILE_SIZE);
+
+                const auto block_index = cuda::block.rank(cuda::grid, config);
+                const auto thread_index = cuda::gpu_thread.rank(cuda::block, config);
+
+                const auto q_head_index = block_index / tile_per_head;
                 const auto q_head_count = args.query.dim(0);
                 const auto kv_head_count = args.key.dim(1);
-                const auto head_size = args.query.dim(1);
-                const auto query_heads_per_kv_head = q_head_count / kv_head_count;
-                const auto kv_head_index = query_head_index / query_heads_per_kv_head;
-                const auto token_count = args.token_pos + 1;
-                const auto attention_scale = 1.0F / cuda::std::sqrtf(static_cast<float>(head_size));
+                const auto kv_head_index = q_head_index / (q_head_count / kv_head_count);
+                const auto tile_index = block_index % tile_per_head;
+                const auto first_token = tile_index * KV_TILE_SIZE;
 
-                // todo look if we can cast shared_memory to cuda::std::span or struct of spans? this sucks rn
-                auto shared_memory = cuda::dynamic_shared_memory(config);
-                auto* q_shared = shared_memory.data();
-                auto* k_shared = q_shared + head_size;
-                auto* v_shared = k_shared + KV_TILE_SIZE * head_size;
-                auto* reduction = v_shared + KV_TILE_SIZE * head_size;
-                auto* scores_shared = reduction + head_size;
-                auto* tile_maximum_shared = scores_shared + KV_TILE_SIZE;
-                auto* tile_exponential_sum_shared = tile_maximum_shared + 1;
+                auto tile_token_count = KV_TILE_SIZE;
+                tile_token_count = cuda::std::min(tile_token_count, context_len - first_token);
 
-                q_shared[head_dimension_index] = __bfloat162float(args.query(query_head_index, head_dimension_index));
-                __syncthreads();
+                constexpr int head_dim = 128;
+                const auto attention_scale = 1.0f / cuda::std::sqrtf(static_cast<float>(head_dim));
+                float q_value = __bfloat162float(args.query(q_head_index, thread_index));
 
-                float running_maximum = -cuda::std::numeric_limits<float>::infinity();
-                float running_denominator = 0.0F;
-                float running_numerator = 0.0F;
+                __shared__ BlockReduce::TempStorage reduce_storage;
+                __shared__ float scores[KV_TILE_SIZE];
+                __shared__ float tile_max;
 
-                for (std::size_t tile_start = 0; tile_start < token_count; tile_start += KV_TILE_SIZE) {
-                    const auto tile_token_count = token_count - tile_start < KV_TILE_SIZE ? token_count - tile_start : KV_TILE_SIZE;
+                float local_max = -cuda::std::numeric_limits<float>::infinity();
+                for (std::size_t tile = 0; tile < tile_token_count; ++tile) {
+                    auto token_idx = first_token + tile;
+                    float dot = q_value * __bfloat162float(args.key(token_idx, kv_head_index, thread_index));
 
-                    for (std::size_t token_in_tile = 0; token_in_tile < tile_token_count; ++token_in_tile) {
-                        const auto token_index = tile_start + token_in_tile;
-                        const auto shared_offset = token_in_tile * head_size + head_dimension_index;
-
-                        k_shared[shared_offset] = __bfloat162float(args.key(token_index, kv_head_index, head_dimension_index));
-                        v_shared[shared_offset] = __bfloat162float(args.value(token_index, kv_head_index, head_dimension_index));
+                    const float score = BlockReduce(reduce_storage).Sum(dot);
+                    if (thread_index == 0) {
+                        scores[tile] = score * attention_scale;
+                        local_max = cuda::std::max(local_max, scores[tile]);
                     }
-                    __syncthreads();
-
-                    for (std::size_t token_in_tile = 0; token_in_tile < tile_token_count; ++token_in_tile) {
-                        const auto shared_offset = token_in_tile * head_size + head_dimension_index;
-                        reduction[head_dimension_index] = q_shared[head_dimension_index] * k_shared[shared_offset];
-                        __syncthreads();
-
-                        for (std::size_t active_count = head_size; active_count > 1; active_count = (active_count + 1) / 2) {
-                            const auto upper_half_start = (active_count + 1) / 2;
-                            if (head_dimension_index < upper_half_start && head_dimension_index + upper_half_start < active_count) {
-                                reduction[head_dimension_index] += reduction[head_dimension_index + upper_half_start];
-                            }
-                            __syncthreads();
-                        }
-
-                        if (head_dimension_index == 0) {
-                            scores_shared[token_in_tile] = reduction[0] * attention_scale;
-                        }
-                        __syncthreads();
-                    }
-
-                    if (head_dimension_index == 0) {
-                        auto tile_maximum = -cuda::std::numeric_limits<float>::infinity();
-                        for (std::size_t token_in_tile = 0; token_in_tile < tile_token_count; ++token_in_tile) {
-                            tile_maximum = cuda::std::max(tile_maximum, scores_shared[token_in_tile]);
-                        }
-
-                        float tile_exponential_sum = 0.0F;
-                        for (std::size_t token_in_tile = 0; token_in_tile < tile_token_count; ++token_in_tile) {
-                            const auto weight = cuda::std::exp(scores_shared[token_in_tile] - tile_maximum);
-                            scores_shared[token_in_tile] = weight;
-                            tile_exponential_sum += weight;
-                        }
-
-                        *tile_maximum_shared = tile_maximum;
-                        *tile_exponential_sum_shared = tile_exponential_sum;
-                    }
-                    __syncthreads();
-
-                    // This thread owns one head dimension of the output.
-                    float tile_numerator = 0.0F;
-                    for (std::size_t token_in_tile = 0; token_in_tile < tile_token_count; ++token_in_tile) {
-                        const auto shared_offset = token_in_tile * head_size + head_dimension_index;
-                        tile_numerator += scores_shared[token_in_tile] * v_shared[shared_offset];
-                    }
-
-                    const auto updated_maximum = cuda::std::max(running_maximum, *tile_maximum_shared);
-                    const auto previous_rescale = cuda::std::exp(running_maximum - updated_maximum);
-                    const auto tile_rescale = cuda::std::exp(*tile_maximum_shared - updated_maximum);
-
-                    running_numerator = running_numerator * previous_rescale + tile_numerator * tile_rescale;
-                    running_denominator = running_denominator * previous_rescale + *tile_exponential_sum_shared * tile_rescale;
-                    running_maximum = updated_maximum;
-                    __syncthreads();
                 }
 
-                args.output(query_head_index, head_dimension_index) = __float2bfloat16(running_numerator / running_denominator);
+                if (thread_index == 0) {
+                    tile_max = local_max;
+                }
+                __syncthreads();
+
+                float local_denominator = 0.0f;
+                if (thread_index < tile_token_count) {
+                    const float attention = cuda::std::expf(scores[thread_index] - tile_max);
+                    scores[thread_index] = attention;
+                    local_denominator = attention;
+                }
+                const float denominator = BlockReduce(reduce_storage).Sum(local_denominator);
+
+                if (thread_index == 0) {
+                    args.workspace.maximum(q_head_index, tile_index) = tile_max;
+                    args.workspace.denominator(q_head_index, tile_index) = denominator;
+                }
+
+                float numerator = 0.0f;
+                for (std::size_t tile = 0; tile < tile_token_count; ++tile) {
+                    numerator += scores[tile] * __bfloat162float(args.value(first_token + tile, kv_head_index, thread_index));
+                }
+                args.workspace.numerator(q_head_index, tile_index, thread_index) = numerator;
+            }
+        };
+
+        struct CombineFlashAttention {
+            struct Args {
+                FlashAttentionScratchView workspace;
+                TensorView<__nv_bfloat16> output;
+                std::size_t active_splits;
+            };
+
+            template <typename Configuration>
+            __device__ void operator()(const Configuration& config, Args args) const {
+                const auto head_index = cuda::block.rank(cuda::grid, config);
+                const auto thread_index = cuda::gpu_thread.rank(cuda::block, config);
+                const auto num_splits = args.active_splits;
+
+                __shared__ float maximum;
+                if (thread_index == 0) {
+                    float local_maximum = -cuda::std::numeric_limits<float>::infinity();
+                    for (std::size_t index = 0; index < num_splits; ++index) {
+                        local_maximum = cuda::std::max(local_maximum, args.workspace.maximum(head_index, index));
+                    }
+                    maximum = local_maximum;
+                }
+                __syncthreads();
+
+                float local_denominator = 0.0f;
+                for (std::size_t split = thread_index; split < num_splits; split += threads_per_block) {
+                    const float rescale = cuda::std::expf(args.workspace.maximum(head_index, split) - maximum);
+                    local_denominator += args.workspace.denominator(head_index, split) * rescale;
+                }
+
+                __shared__ BlockReduce::TempStorage reduce_storage;
+                __shared__ float denominator;
+                const float reduce = BlockReduce(reduce_storage).Sum(local_denominator);
+
+                if (thread_index == 0) {
+                    denominator = reduce;
+                }
+                __syncthreads();
+
+                float numerator = 0.0f;
+                for (std::size_t split = 0; split < num_splits; ++split) {
+                    const float rescale = cuda::std::expf(args.workspace.maximum(head_index, split) - maximum);
+                    numerator += rescale * args.workspace.numerator(head_index, split, thread_index);
+                }
+                args.output(head_index, thread_index) = __float2bfloat16(numerator / denominator);
             }
         };
     } // namespace detail
 
-    inline void flash_attention(cuda::stream_ref stream, const TensorView<const __nv_bfloat16> query, const TensorView<const __nv_bfloat16> key,
-                                const TensorView<const __nv_bfloat16> value, const TensorView<__nv_bfloat16> output, const std::size_t token_pos) {
-        const auto q_head_count = query.dim(0);
-        const auto head_size = query.dim(1);
-        const auto shared_memory = cuda::dynamic_shared_memory<float[]>(detail::shared_memory_element_count(head_size));
-        const auto config = cuda::make_config(cuda::grid_dims(q_head_count), cuda::block_dims(head_size), shared_memory);
+    inline void new_flash_attention(cuda::stream_ref stream, const TensorView<const __nv_bfloat16> query, const TensorView<const __nv_bfloat16> key,
+                                    const TensorView<const __nv_bfloat16> value, const TensorView<__nv_bfloat16> output,
+                                    const FlashAttentionScratchView workspace, const std::size_t token_pos) {
+        assert(query.dim(1) == 128);
+        const auto q_num_heads = query.dim(0);
+        const auto kv_splits = cuda::ceil_div(token_pos + 1, KV_TILE_SIZE);
 
-        const auto args = detail::FlashAttentionBf16::Args{
+        const auto num_blocks = q_num_heads * kv_splits;
+        const auto split_config = cuda::make_config(cuda::grid_dims(num_blocks), cuda::block_dims(detail::threads_per_block));
+        const auto split_args = detail::FlashAttentionDecodeBF16::Args{
             .query = query,
             .key = key,
             .value = value,
-            .output = output,
+            .workspace = workspace,
             .token_pos = token_pos,
         };
+        cuda::launch(stream, split_config, detail::FlashAttentionDecodeBF16{}, split_args);
 
-        cuda::launch(stream, config, detail::FlashAttentionBf16{}, args);
+        const auto combine_config = cuda::make_config(cuda::grid_dims(q_num_heads), cuda::block_dims(detail::threads_per_block));
+        const auto combine_args = detail::CombineFlashAttention::Args{
+            .workspace = workspace,
+            .output = output,
+            .active_splits = kv_splits,
+        };
+        cuda::launch(stream, combine_config, detail::CombineFlashAttention{}, combine_args);
     }
 } // namespace inference::gpu::kernels

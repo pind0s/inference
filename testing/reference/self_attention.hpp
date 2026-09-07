@@ -25,7 +25,6 @@ namespace test::reference {
         for (std::size_t query_head = 0; query_head < query_head_count; ++query_head) {
             const auto key_value_head = query_head / queries_per_key_value;
 
-            // Compute all scores before overwriting this query head.
             for (std::size_t key_position = 0; key_position < weights.size(); ++key_position) {
                 float score = 0.0F;
                 for (std::size_t index = 0; index < head_size; ++index) {

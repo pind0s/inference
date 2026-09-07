@@ -2,6 +2,7 @@
 #include "backend/cpu/avx.hpp"
 #include "tensor/tensor_view.hpp"
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -27,25 +28,15 @@ namespace inference::cpu::kernels {
             auto maximum_score = std::numeric_limits<float>::lowest();
 
             for (std::size_t key_position = 0; key_position <= pos; ++key_position) {
-                std::size_t index = 0;
                 avx::f32x16 score_accumulator{};
 
-                for (; index + bf16_dot_lanes <= head_size; index += bf16_dot_lanes) {
+                for (std::size_t index = 0; index < head_size; index += bf16_dot_lanes) {
                     const auto q = avx::load<avx::bf16x32>(&query(query_head, index));
                     const auto k = avx::load<avx::bf16x32>(&key(key_position, key_value_head, index));
                     score_accumulator = avx::dot_bf16(q, k, score_accumulator);
                 }
 
-                for (; index + lanes <= head_size; index += lanes) {
-                    const auto q_f32 = avx::load_bf16_as_f32(&query(query_head, index));
-                    const auto k_f32 = avx::load_bf16_as_f32(&key(key_position, key_value_head, index));
-                    score_accumulator += q_f32 * k_f32;
-                }
-
-                auto score = avx::reduce_add(score_accumulator);
-                for (; index < head_size; ++index) {
-                    score += query(query_head, index).to_float() * key(key_position, key_value_head, index).to_float();
-                }
+                const auto score = avx::reduce_add(score_accumulator);
 
                 scores[key_position] = score * attention_scale;
                 maximum_score = std::max(maximum_score, scores[key_position]);
@@ -70,8 +61,7 @@ namespace inference::cpu::kernels {
                 score_sum += scores[key_position];
             }
 
-            std::size_t index = 0;
-            for (; index + lanes <= head_size; index += lanes) {
+            for (std::size_t index = 0; index < head_size; index += lanes) {
                 avx::f32x16 result{};
                 for (std::size_t key_position = 0; key_position < scores.size(); ++key_position) {
                     const auto values = avx::load_bf16_as_f32(&value(key_position, key_value_head, index));
@@ -79,14 +69,6 @@ namespace inference::cpu::kernels {
                     result += values * weight;
                 }
                 avx::store_f32_as_bf16(&output(query_head, index), result);
-            }
-
-            for (; index < head_size; ++index) {
-                float result = 0.0F;
-                for (std::size_t key_position = 0; key_position < scores.size(); ++key_position) {
-                    result += scores[key_position] / score_sum * value(key_position, key_value_head, index).to_float();
-                }
-                output(query_head, index) = result;
             }
         }
     }

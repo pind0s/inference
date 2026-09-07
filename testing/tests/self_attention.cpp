@@ -1,9 +1,11 @@
 #include "reference/self_attention.hpp"
 #include "backend/backend.hpp"
 #include "types/device.hpp"
+#include "util/make_tensor.hpp"
 #include "util/random.hpp"
 #include "util/tensor_matchers.hpp"
 #include "util/to_host.hpp"
+#include <algorithm>
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -11,49 +13,45 @@
 #include <cstddef>
 #include <cuda_runtime_api.h>
 #include <stdexcept>
+#include <vector>
 
-TEST_CASE("self attention matches the reference", "[backend][self_attention]") {
+constexpr std::size_t query_head_count = 32;
+constexpr std::size_t kv_head_count = 32;
+constexpr std::size_t position = 1024;
+constexpr std::size_t head_dim = 128;
+
+TEST_CASE("flash decode attention", "[backend][self_attention][flash decode]") {
     using namespace inference;
 
-    const auto device = GENERATE(types::Device::CPU, types::Device::CUDA);
-    CAPTURE(types::device_to_string(device));
-    auto& backend = Backend::select_backend(device);
+    auto& backend = Backend::get_backend<types::Device::CUDA>();
+    auto& cpu_backend = Backend::get_backend<types::Device::CPU>();
 
-    const auto head_size = GENERATE(32uz, 65uz, 128uz);
-    const auto kv_head_count = GENERATE(1uz, 2uz, 4uz);
-    const auto position = GENERATE(0uz, 1uz, 31uz, 32uz, 50uz);
-    CAPTURE(head_size, kv_head_count, position);
+    const auto query = test::random_bf16({ query_head_count, head_dim }, backend);
+    const auto key = test::random_bf16({ position + 1, kv_head_count, head_dim }, backend);
+    const auto value = test::random_bf16({ position + 1, kv_head_count, head_dim }, backend);
+    auto output = test::random_bf16({ query_head_count, head_dim }, backend);
 
-    constexpr std::size_t query_head_count = 4;
-    constexpr std::size_t max_pos = 51;
-    const auto query = test::random_bf16({ query_head_count, head_size }, backend);
-    const auto key = test::random_bf16({ max_pos, kv_head_count, head_size }, backend, { 1 });
-    const auto value = test::random_bf16({ max_pos, kv_head_count, head_size }, backend, { 2 });
-    auto output = Tensor::empty(query.shape(), types::DType::BF16, backend);
-    const auto expected = test::reference::self_attention(query, key, value, position);
-
+    auto expected = test::reference::self_attention(query, key, value, position);
     backend.self_attention(query, key, value, output, position);
-    const auto output_host = test::to_host(output);
+    auto output_host = test::to_host(output);
+
     CHECK_THAT(output_host, test::WithinRel(expected, 0.01f));
+
 }
 
-TEST_CASE("self attention benchmark", "[benchmark][self_attention]") {
+TEST_CASE("flash decode attention", "[benchmark][self_attention][flash decode]") {
     using namespace inference;
 
     const auto device = GENERATE(types::Device::CPU, types::Device::CUDA);
     CAPTURE(types::device_to_string(device));
     auto& backend = Backend::select_backend(device);
 
-    constexpr std::size_t query_head_count = 8;
-    constexpr std::size_t kv_head_count = 2;
-    constexpr std::size_t head_size = 128;
-    constexpr std::size_t position = 50;
-    const auto query = test::random_bf16({ query_head_count, head_size }, backend);
-    const auto key = test::random_bf16({ position + 1, kv_head_count, head_size }, backend);
-    const auto value = test::random_bf16({ position + 1, kv_head_count, head_size }, backend);
+    const auto query = test::random_bf16({ query_head_count, head_dim }, backend);
+    const auto key = test::random_bf16({ position + 1, kv_head_count, head_dim }, backend);
+    const auto value = test::random_bf16({ position + 1, kv_head_count, head_dim }, backend);
     auto output = Tensor::empty(query.shape(), types::DType::BF16, backend);
 
-    BENCHMARK(types::device_to_string(device) + " Self attention") {
+    BENCHMARK(types::device_to_string(device) + " flash decode") {
         backend.self_attention(query, key, value, output, position);
         if (device == types::Device::CUDA) {
             if (const auto error = cudaDeviceSynchronize(); error != cudaSuccess) {

@@ -8,12 +8,13 @@
 #include "backend/cuda/kernels/rope.cuh"
 #include "backend/cuda/kernels/silu.cuh"
 #include "backend/util/rope_cache.hpp"
+#include "cuda/cmath"
 #include "tensor/tensor.hpp"
 #include "types/device.hpp"
 #include <cublas_v2.h>
-#include <cuda/algorithm>
 #include <cuda/memory_resource>
 #include <cuda_runtime_api.h>
+#include <optional>
 #include <stdexcept>
 #include <thrust/device_ptr.h>
 #include <thrust/extrema.h>
@@ -82,26 +83,15 @@ namespace inference {
                 kernels::rope(stream_, values.view<__nv_bfloat16>(), cache.view(), position);
             }
 
-            void kv_cache_update(const Tensor& key, const Tensor& value, Tensor& cached_key, Tensor& cached_value,
-                                 const std::size_t token_offset) override {
-                assert(key.dtype() == types::DType::BF16);
-
-                const auto key_offset_bytes = token_offset * key.size_bytes();
-                const auto value_offset_bytes = token_offset * value.size_bytes();
-
-                const auto key_source = cuda::std::span{ key.bytes().data(), key.size_bytes() };
-                const auto value_source = cuda::std::span{ value.bytes().data(), value.size_bytes() };
-                const auto key_destination = cuda::std::span{ cached_key.bytes().data() + key_offset_bytes, key.size_bytes() };
-                const auto value_destination = cuda::std::span{ cached_value.bytes().data() + value_offset_bytes, value.size_bytes() };
-
-                cuda::copy_bytes(stream_, key_source, key_destination);
-                cuda::copy_bytes(stream_, value_source, value_destination);
-            }
-
             void self_attention(const Tensor& query, const Tensor& key, const Tensor& value, Tensor& output, const std::size_t position) override {
                 assert(output.dtype() == types::DType::BF16);
-                kernels::flash_attention(stream_, query.view<__nv_bfloat16>(), key.view<__nv_bfloat16>(), value.view<__nv_bfloat16>(),
-                                         output.view<__nv_bfloat16>(), position);
+
+                if (!flash_attention_scratch_) {
+                    init_flash_attention_scratch(query, key);
+                }
+
+                kernels::new_flash_attention(stream_, query.view<__nv_bfloat16>(), key.view<__nv_bfloat16>(), value.view<__nv_bfloat16>(),
+                                             output.view<__nv_bfloat16>(), flash_attention_scratch_->view(), position);
             }
 
             void add(const Tensor& left, const Tensor& right, Tensor& output) override {
@@ -131,6 +121,18 @@ namespace inference {
             }
 
         private:
+            void init_flash_attention_scratch(const Tensor& query, const Tensor& key) {
+                const auto query_heads = query.shape().dim(0);
+                const auto head_dim = query.shape().dim(1);
+                const auto split_capacity = cuda::ceil_div(key.shape().dim(0), kernels::KV_TILE_SIZE);
+
+                flash_attention_scratch_.emplace(kernels::FlashAttentionScratch{
+                    .maximum = Tensor::empty({ query_heads, split_capacity }, types::DType::F32, *this),
+                    .denominator = Tensor::empty({ query_heads, split_capacity }, types::DType::F32, *this),
+                    .numerator = Tensor::empty({ query_heads, split_capacity, head_dim }, types::DType::F32, *this),
+                });
+            }
+
             static void check_cuda(const cudaError_t error) {
                 if (error != cudaSuccess) {
                     throw std::runtime_error(cudaGetErrorString(error));
@@ -141,6 +143,7 @@ namespace inference {
             cuda::stream stream_;
             cuda::device_memory_pool memory_pool_;
             cublasHandle_t cublas_handle_{};
+            std::optional<kernels::FlashAttentionScratch> flash_attention_scratch_;
         };
     } // namespace gpu
 
