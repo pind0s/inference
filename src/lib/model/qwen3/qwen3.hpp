@@ -71,8 +71,6 @@ namespace inference::model::qwen3 {
         Tensor hidden_state;
         Tensor hidden;
         Tensor query;
-        Tensor key;
-        Tensor value;
         Tensor gate;
         Tensor up;
         Tensor logits;
@@ -81,8 +79,6 @@ namespace inference::model::qwen3 {
             : hidden_state(Tensor::empty({ config.hidden_size }, config.dtype, backend)),
               hidden(Tensor::empty({ config.hidden_size }, config.dtype, backend)),
               query(Tensor::empty({ config.num_attention_heads, config.head_dim }, config.dtype, backend)),
-              key(Tensor::empty({ config.num_key_value_heads, config.head_dim }, config.dtype, backend)),
-              value(Tensor::empty({ config.num_key_value_heads, config.head_dim }, config.dtype, backend)),
               gate(Tensor::empty({ config.intermediate_size }, config.dtype, backend)),
               up(Tensor::empty({ config.intermediate_size }, config.dtype, backend)),
               logits(Tensor::empty({ config.vocab_size }, config.dtype, backend)) { }
@@ -140,16 +136,15 @@ namespace inference::model::qwen3 {
             for (auto&& [layer, layer_cache] : std::views::zip(layers, kv_cache.layers)) {
                 backend.rmsnorm(scratch.hidden_state, layer.input_layernorm, scratch.hidden, config.rms_norm_eps);
 
+                auto key = layer_cache.key.select(token_pos);
+                auto value = layer_cache.value.select(token_pos);
+
                 // todo pack the qkv into one big tensor
                 backend.matmul(scratch.hidden, layer.self_attn.q_proj, scratch.query);
-                backend.matmul(scratch.hidden, layer.self_attn.k_proj, scratch.key);
-                backend.matmul(scratch.hidden, layer.self_attn.v_proj, scratch.value);
+                backend.matmul(scratch.hidden, layer.self_attn.k_proj, key);
+                backend.matmul(scratch.hidden, layer.self_attn.v_proj, value);
 
-                backend.qk_norm_rope(scratch.query, scratch.key, layer.self_attn.q_norm, layer.self_attn.k_norm, rope_cache, token_pos,
-                                     config.rms_norm_eps);
-
-                // todo fused kv cache update with matmul and qk_norm_rope
-                backend.kv_cache_update(scratch.key, scratch.value, layer_cache.key, layer_cache.value, kv_cache.token_count);
+                backend.qk_norm_rope(scratch.query, key, layer.self_attn.q_norm, layer.self_attn.k_norm, rope_cache, token_pos, config.rms_norm_eps);
 
                 backend.self_attention(scratch.query, layer_cache.key, layer_cache.value, scratch.query, token_pos);
 

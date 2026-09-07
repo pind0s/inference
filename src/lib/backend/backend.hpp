@@ -28,7 +28,6 @@ namespace inference {
         virtual void rmsnorm(Tensor& input, const Tensor& weight, Tensor& output, float epsilon) = 0;
         virtual void rmsnorm_add(Tensor& residual, const Tensor& residual_update, const Tensor& weight, Tensor& output, float epsilon) = 0;
         virtual void rope(Tensor& values, const backend::RopeCache& cache, std::size_t position) = 0;
-        virtual void kv_cache_update(const Tensor& key, const Tensor& value, Tensor& cached_key, Tensor& cached_value, std::size_t token_offset) = 0;
         virtual void self_attention(const Tensor& query, const Tensor& key, const Tensor& value, Tensor& output, std::size_t position) = 0;
         virtual void add(const Tensor& left, const Tensor& right, Tensor& output) = 0;
         virtual void silu(const Tensor& gate, const Tensor& up, Tensor& output) = 0;

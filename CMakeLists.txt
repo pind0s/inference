@@ -14,7 +14,6 @@ add_subdirectory(src/lib/backend/cuda)
 
 add_library(inference_lib STATIC
         src/lib/inference/generator.cpp
-        src/lib/tensor/tensor.cpp
         src/lib/tokenizer/tokenizer.cpp)
 
 target_include_directories(inference_lib

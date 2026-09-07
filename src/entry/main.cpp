@@ -6,12 +6,12 @@
 
 int main(const int argc, char* argv[]) try {
     const auto [model_path, context_size, device] = Args::parse_args(argc, argv);
-    const std::string prompt = "Tell me a short story about LLMs";
-    std::println("Prompt: {}", prompt);
+    const std::string prompt = "Count from 1 to 100,000 writing one number per line";
 
     auto generator = inference::Generator::load(model_path, device, context_size);
     const auto response = generator.generate(prompt);
 
+    std::println("Prompt: {}", prompt);
     std::println("Response: {}", response);
 } catch (const std::exception& error) {
     std::println(stderr, "Error: {}", error.what());

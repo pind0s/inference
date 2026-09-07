@@ -1,7 +1,6 @@
 #include "backend/backend.hpp"
 #include "backend/cpu/kernels/add.hpp"
 #include "backend/cpu/kernels/embedding.hpp"
-#include "backend/cpu/kernels/kv_cache.hpp"
 #include "backend/cpu/kernels/matmul.hpp"
 #include "backend/cpu/kernels/qk_norm_rope.hpp"
 #include "backend/cpu/kernels/rmsnorm.hpp"
@@ -80,12 +79,6 @@ namespace inference {
             void rope(Tensor& values, const backend::RopeCache& cache, const std::size_t position) override {
                 assert(values.dtype() == types::DType::BF16);
                 kernels::rope(values.view<bf16_t>(), cache.view(), position);
-            }
-
-            void kv_cache_update(const Tensor& key, const Tensor& value, Tensor& cached_key, Tensor& cached_value,
-                                 const std::size_t token_offset) override {
-                assert(key.dtype() == types::DType::BF16);
-                kernels::kv_cache_update(key.view<bf16_t>(), value.view<bf16_t>(), cached_key.view<bf16_t>(), cached_value.view<bf16_t>(), token_offset);
             }
 
             void self_attention(const Tensor& query, const Tensor& key, const Tensor& value, Tensor& output, const std::size_t position) override {
