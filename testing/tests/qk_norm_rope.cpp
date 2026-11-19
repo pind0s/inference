@@ -4,14 +4,11 @@
 #include "types/device.hpp"
 #include "util/random.hpp"
 #include "util/tensor_matchers.hpp"
-#include "util/to_host.hpp"
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <cstddef>
-#include <cuda_runtime_api.h>
-#include <stdexcept>
 
 constexpr std::size_t head_size = 128;
 constexpr float theta = 1'000'000.0f;
@@ -39,10 +36,8 @@ TEST_CASE("qk norm rope matches the reference", "[backend][qk_norm_rope]") {
     const auto expected_key = test::reference::norm_rope(key, k_norm, cache, position, epsilon);
 
     backend.qk_norm_rope(query, key, q_norm, k_norm, cache, position, epsilon);
-    const auto query_host = test::to_host(query);
-    const auto key_host = test::to_host(key);
-    CHECK_THAT(query_host, test::WithinRel(expected_query, 0.01f, 0.01f));
-    CHECK_THAT(key_host, test::WithinRel(expected_key, 0.01f, 0.01f));
+    CHECK_THAT(query.to_host(), test::WithinRel(expected_query, 0.01f, 0.01f));
+    CHECK_THAT(key.to_host(), test::WithinRel(expected_key, 0.01f, 0.01f));
 }
 
 TEST_CASE("qk norm rope benchmark", "[benchmark][qk_norm_rope]") {
@@ -63,10 +58,6 @@ TEST_CASE("qk norm rope benchmark", "[benchmark][qk_norm_rope]") {
 
     BENCHMARK(types::device_to_string(device) + " qk norm rope") {
         backend.qk_norm_rope(query, key, q_norm, k_norm, cache, position, epsilon);
-        if (device == types::Device::CUDA) {
-            if (const auto error = cudaDeviceSynchronize(); error != cudaSuccess) {
-                throw std::runtime_error(cudaGetErrorString(error));
-            }
-        }
+        backend.synchronize();
     };
 }

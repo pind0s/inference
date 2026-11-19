@@ -1,12 +1,12 @@
 #pragma once
 #include "backend/cpu/bf16.hpp"
-#include "util/to_host.hpp"
+#include "tensor/tensor.hpp"
 
 namespace test::reference {
     [[nodiscard]] inline inference::Tensor matmul(const inference::Tensor& input, const inference::Tensor& weights) {
         using namespace inference;
-        const auto input_host = to_host(input);
-        const auto weights_host = to_host(weights);
+        const auto input_host = input.to_host();
+        const auto weights_host = weights.to_host();
         const auto lhs = input_host.view<cpu::bf16_t>();
         const auto rhs = weights_host.view<cpu::bf16_t>();
         const auto column_count = rhs.dim(0);

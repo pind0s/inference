@@ -22,6 +22,10 @@ namespace inference {
         virtual void deallocate(void* pointer, std::size_t size_bytes) noexcept = 0;
 
         [[nodiscard]] virtual Tensor make_tensor(std::span<const std::byte> source, const TensorShape& shape, types::DType dtype) = 0;
+        // Copies the tensor's bytes into host memory. Blocks until the copy (and all work queued before it) has finished.
+        virtual void copy_to_host(const Tensor& source, std::span<std::byte> destination) = 0;
+        // Blocks until all work queued on this backend has finished.
+        virtual void synchronize() = 0;
 
         virtual void embedding(types::TokenId token_id, const Tensor& weights, Tensor& output) = 0;
         virtual void matmul(const Tensor& input, const Tensor& weights, Tensor& output) = 0;

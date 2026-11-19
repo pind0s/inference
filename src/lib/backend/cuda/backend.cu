@@ -49,6 +49,20 @@ namespace inference {
                 return tensor;
             }
 
+            void copy_to_host(const Tensor& source, const std::span<std::byte> destination) override {
+                if (destination.size_bytes() != source.size_bytes()) {
+                    throw std::invalid_argument("cuda::backend: destination size does not match the tensor size");
+                }
+                if (!destination.empty()) {
+                    check_cuda(cudaMemcpyAsync(destination.data(), source.bytes().data(), destination.size_bytes(), cudaMemcpyDeviceToHost, stream_.get()));
+                    stream_.sync();
+                }
+            }
+
+            void synchronize() override {
+                stream_.sync();
+            }
+
             [[nodiscard]] void* allocate(std::size_t size_bytes) override {
                 return memory_pool_.allocate(stream_, size_bytes);
             }

@@ -1,14 +1,14 @@
 #pragma once
 #include "backend/cpu/bf16.hpp"
-#include "util/to_host.hpp"
+#include "tensor/tensor.hpp"
 #include <cmath>
 #include <span>
 
 namespace test::reference {
     [[nodiscard]] inline inference::Tensor rmsnorm(const inference::Tensor& input_tensor, const inference::Tensor& weight_tensor, const float epsilon) {
         using namespace inference;
-        auto result = to_host(input_tensor);
-        const auto weight_host = to_host(weight_tensor);
+        auto result = input_tensor.to_host();
+        const auto weight_host = weight_tensor.to_host();
         const auto weight = weight_host.view<cpu::bf16_t>();
         auto output = result.view<cpu::bf16_t>();
         const auto row_size = weight.size();

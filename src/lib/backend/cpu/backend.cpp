@@ -38,6 +38,17 @@ namespace inference {
                 return tensor;
             }
 
+            void copy_to_host(const Tensor& source, const std::span<std::byte> destination) override {
+                if (destination.size_bytes() != source.size_bytes()) {
+                    throw std::invalid_argument("cpu::backend: destination size does not match the tensor size");
+                }
+                if (!destination.empty()) {
+                    std::memcpy(destination.data(), source.bytes().data(), destination.size_bytes());
+                }
+            }
+
+            void synchronize() override { }
+
             void deallocate(void* pointer, std::size_t bytes) noexcept override {
                 operator delete(pointer, bytes, alignment);
             }

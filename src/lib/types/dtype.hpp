@@ -13,6 +13,28 @@ namespace inference::types {
         I64,
     };
 
+    // Maps a C++ element type to its DType. Specialize for custom element types (see cpu::bf16_t).
+    template <typename T>
+    struct dtype_of;
+
+    template <>
+    struct dtype_of<float> {
+        static constexpr DType value = DType::F32;
+    };
+
+    template <>
+    struct dtype_of<std::int32_t> {
+        static constexpr DType value = DType::I32;
+    };
+
+    template <>
+    struct dtype_of<std::int64_t> {
+        static constexpr DType value = DType::I64;
+    };
+
+    template <typename T>
+    constexpr DType dtype_of_v = dtype_of<T>::value;
+
     [[nodiscard]] inline std::size_t dtype_byte_size(const DType dtype) {
         switch (dtype) {
         case DType::F16:

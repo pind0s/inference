@@ -1,6 +1,6 @@
 #pragma once
 #include "backend/cpu/bf16.hpp"
-#include "util/to_host.hpp"
+#include "tensor/tensor.hpp"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -9,9 +9,9 @@ namespace test::reference {
     [[nodiscard]] inline inference::Tensor self_attention(const inference::Tensor& query_tensor, const inference::Tensor& key_tensor,
                                                           const inference::Tensor& value_tensor, const std::size_t position) {
         using namespace inference;
-        auto result = to_host(query_tensor);
-        const auto key_host = to_host(key_tensor);
-        const auto value_host = to_host(value_tensor);
+        auto result = query_tensor.to_host();
+        const auto key_host = key_tensor.to_host();
+        const auto value_host = value_tensor.to_host();
         const auto key = key_host.view<cpu::bf16_t>();
         const auto value = value_host.view<cpu::bf16_t>();
         auto output = result.view<cpu::bf16_t>();

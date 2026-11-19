@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 
@@ -14,6 +15,22 @@ namespace inference {
     public:
         [[nodiscard]] static Tensor empty(const TensorShape& shape, const types::DType dtype, Backend& backend) {
             return { shape, dtype, backend };
+        }
+
+        // Allocates a tensor on `backend` and copies `values` into it. The dtype is deduced from the element type.
+        template <typename Range>
+            requires std::ranges::contiguous_range<const Range> && std::ranges::sized_range<const Range>
+        [[nodiscard]] static Tensor from(const Range& values, const TensorShape& shape, Backend& backend) {
+            using Value = std::remove_cv_t<std::ranges::range_value_t<const Range>>;
+            return backend.make_tensor(std::as_bytes(std::span{ values }), shape, types::dtype_of_v<Value>);
+        }
+
+        // Returns a CPU copy of this tensor. Waits for all work queued on the tensor's backend before copying.
+        // Always deep-copies, so the result can be modified without touching this tensor.
+        [[nodiscard]] Tensor to_host() const {
+            auto result = empty(shape_, dtype_, Backend::get_backend<types::Device::CPU>());
+            storage_->backend.copy_to_host(*this, result.bytes());
+            return result;
         }
 
         // Select one entry along the first dimension without copying data.

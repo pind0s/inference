@@ -3,14 +3,11 @@
 #include "types/device.hpp"
 #include "util/random.hpp"
 #include "util/tensor_matchers.hpp"
-#include "util/to_host.hpp"
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <cstddef>
-#include <cuda_runtime_api.h>
-#include <stdexcept>
 
 constexpr float epsilon = 1e-6f;
 
@@ -30,8 +27,7 @@ TEST_CASE("rmsnorm matches the reference", "[backend][rmsnorm]") {
     const auto expected = test::reference::rmsnorm(input, weight, epsilon);
 
     backend.rmsnorm(input, weight, output, epsilon);
-    const auto output_host = test::to_host(output);
-    CHECK_THAT(output_host, test::WithinRel(expected, 0.01f));
+    CHECK_THAT(output.to_host(), test::WithinRel(expected, 0.01f));
 }
 
 TEST_CASE("rmsnorm add matches separate add and rmsnorm", "[backend][rmsnorm_add]") {
@@ -53,13 +49,8 @@ TEST_CASE("rmsnorm add matches separate add and rmsnorm", "[backend][rmsnorm_add
     backend.add(residual, update, expected_residual);
     const auto expected_output = test::reference::rmsnorm(expected_residual, weight, epsilon);
     backend.rmsnorm_add(residual, update, weight, output, epsilon);
-
-    const auto residual_host = test::to_host(residual);
-    const auto expected_residual_host = test::to_host(expected_residual);
-    const auto output_host = test::to_host(output);
-    const auto expected_output_host = test::to_host(expected_output);
-    CHECK_THAT(residual_host, test::WithinRel(expected_residual_host, 0.01f));
-    CHECK_THAT(output_host, test::WithinRel(expected_output_host, 0.01f));
+    CHECK_THAT(residual.to_host(), test::WithinRel(expected_residual.to_host(), 0.01f));
+    CHECK_THAT(output.to_host(), test::WithinRel(expected_output, 0.01f));
 }
 
 TEST_CASE("rmsnorm benchmark", "[benchmark][rmsnorm]") {
@@ -76,11 +67,7 @@ TEST_CASE("rmsnorm benchmark", "[benchmark][rmsnorm]") {
 
     BENCHMARK(types::device_to_string(device) + " RMSNorm") {
         backend.rmsnorm(input, weight, output, epsilon);
-        if (device == types::Device::CUDA) {
-            if (const auto error = cudaDeviceSynchronize(); error != cudaSuccess) {
-                throw std::runtime_error(cudaGetErrorString(error));
-            }
-        }
+        backend.synchronize();
     };
 }
 
@@ -99,10 +86,6 @@ TEST_CASE("rmsnorm add benchmark", "[benchmark][rmsnorm_add]") {
 
     BENCHMARK(types::device_to_string(device) + " RMSNorm Add") {
         backend.rmsnorm_add(residual, update, weight, output, epsilon);
-        if (device == types::Device::CUDA) {
-            if (const auto error = cudaDeviceSynchronize(); error != cudaSuccess) {
-                throw std::runtime_error(cudaGetErrorString(error));
-            }
-        }
+        backend.synchronize();
     };
 }

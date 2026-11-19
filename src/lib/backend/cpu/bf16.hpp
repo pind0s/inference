@@ -1,4 +1,5 @@
 #pragma once
+#include "types/dtype.hpp"
 #include <bit>
 #include <cstdint>
 
@@ -43,3 +44,8 @@ namespace inference::cpu {
         std::uint16_t bits_{};
     };
 } // namespace inference::cpu
+
+template <>
+struct inference::types::dtype_of<inference::cpu::bf16_t> {
+    static constexpr DType value = DType::BF16;
+};

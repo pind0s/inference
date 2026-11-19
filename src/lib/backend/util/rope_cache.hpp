@@ -2,7 +2,6 @@
 #include "backend/backend.hpp"
 #include "tensor/tensor.hpp"
 #include <cmath>
-#include <utility>
 #include <vector>
 
 namespace inference::backend {
@@ -17,6 +16,10 @@ namespace inference::backend {
 
         [[nodiscard]] RopeCacheView view() const noexcept {
             return { .cosine = cosine.view<float>(), .sine = sine.view<float>() };
+        }
+
+        [[nodiscard]] RopeCache to_host() const {
+            return { .cosine = cosine.to_host(), .sine = sine.to_host() };
         }
     };
 
@@ -39,8 +42,6 @@ namespace inference::backend {
             }
         }
 
-        auto cos_tensor = backend.make_tensor(std::as_bytes(std::span{ cos }), { max_position, half_size }, types::DType::F32);
-        auto sin_tensor = backend.make_tensor(std::as_bytes(std::span{ sin }), { max_position, half_size }, types::DType::F32);
-        return { .cosine = std::move(cos_tensor), .sine = std::move(sin_tensor) };
+        return { .cosine = Tensor::from(cos, { max_position, half_size }, backend), .sine = Tensor::from(sin, { max_position, half_size }, backend) };
     }
 } // namespace inference::backend

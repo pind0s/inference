@@ -1,12 +1,12 @@
 #pragma once
 #include "backend/cpu/bf16.hpp"
-#include "util/to_host.hpp"
+#include "tensor/tensor.hpp"
 
 namespace test::reference {
     [[nodiscard]] inline inference::Tensor add(const inference::Tensor& lhs, const inference::Tensor& rhs) {
         using namespace inference;
-        auto result = to_host(lhs);
-        const auto rhs_host = to_host(rhs);
+        auto result = lhs.to_host();
+        const auto rhs_host = rhs.to_host();
         auto output = result.view<cpu::bf16_t>();
         const auto rhs_values = rhs_host.view<cpu::bf16_t>();
 
